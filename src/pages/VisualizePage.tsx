@@ -15,7 +15,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Filter,
   Eye,
   EyeOff
 } from 'lucide-react'
