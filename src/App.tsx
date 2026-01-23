@@ -4,6 +4,7 @@ import { InboxPage } from '@/pages/InboxPage'
 import { NotesPage } from '@/pages/NotesPage'
 import { ConceptsPage } from '@/pages/ConceptsPage'
 import { ExportPage } from '@/pages/ExportPage'
+import { VisualizePage } from '@/pages/VisualizePage'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<InboxPage />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/concepts" element={<ConceptsPage />} />
+          <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/export" element={<ExportPage />} />
         </Route>
       </Routes>

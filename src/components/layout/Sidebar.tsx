@@ -54,11 +54,13 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <Button 
                 variant="gold" 
-                className={cn("w-full justify-start", !sidebarOpen && "justify-center px-0")}
+                className={cn("w-full", !sidebarOpen && "justify-center px-0")}
                 onClick={() => setQuickCaptureOpen(true)}
               >
-                <Plus className="h-4 w-4" />
-                {sidebarOpen && <span className="ml-2">Quick Capture</span>}
+                <span className="inline-flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  {sidebarOpen && <span>Quick Capture</span>}
+                </span>
               </Button>
             </TooltipTrigger>
             {!sidebarOpen && (
@@ -72,12 +74,14 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                className={cn("w-full justify-start", !sidebarOpen && "justify-center px-0")}
+                className={cn("w-full", !sidebarOpen && "justify-center px-0")}
                 onClick={() => setSearchOpen(true)}
               >
-                <Search className="h-4 w-4" />
-                {sidebarOpen && <span className="ml-2">Search</span>}
-                {sidebarOpen && <span className="ml-auto text-xs text-warm-gray">Ctrl+K</span>}
+                <span className="inline-flex items-center gap-2 flex-1">
+                  <Search className="h-4 w-4" />
+                  {sidebarOpen && <span>Search</span>}
+                  {sidebarOpen && <span className="ml-auto text-xs text-warm-gray">Ctrl+K</span>}
+                </span>
               </Button>
             </TooltipTrigger>
             {!sidebarOpen && (
@@ -86,10 +90,30 @@ export function Sidebar() {
               </TooltipContent>
             )}
           </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink to="/visualize">
+                {({ isActive }) => (
+                  <Button 
+                    variant={isActive ? "gold" : "outline"}
+                    className={cn("w-full", !sidebarOpen && "justify-center px-0")}
+                  >
+                    {sidebarOpen ? <span>Visualize</span> : <span className="text-xs">Vis</span>}
+                  </Button>
+                )}
+              </NavLink>
+            </TooltipTrigger>
+            {!sidebarOpen && (
+              <TooltipContent side="right">
+                Visualize Data
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 flex flex-col justify-center p-3 pb-30 space-y-4">
           {navItems.map((item) => (
             <Tooltip key={item.to}>
               <TooltipTrigger asChild>
@@ -97,17 +121,19 @@ export function Sidebar() {
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                      "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
                       "hover:bg-ash-stone/50 hover:text-parchment",
                       isActive 
                         ? "bg-ash-stone text-parchment" 
                         : "text-warm-gray",
-                      !sidebarOpen && "justify-center px-0"
+                      !sidebarOpen && "text-center px-0"
                     )
                   }
                 >
-                  <item.icon className="h-5 w-5" />
-                  {sidebarOpen && <span className="ml-3">{item.label}</span>}
+                  <span className="inline-flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    {sidebarOpen && <span>{item.label}</span>}
+                  </span>
                 </NavLink>
               </TooltipTrigger>
               {!sidebarOpen && (
@@ -127,17 +153,19 @@ export function Sidebar() {
                 to="/export"
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
                     "hover:bg-ash-stone/50 hover:text-parchment",
                     isActive 
                       ? "bg-ash-stone text-parchment" 
                       : "text-warm-gray",
-                    !sidebarOpen && "justify-center px-0"
+                    !sidebarOpen && "text-center px-0"
                   )
                 }
               >
-                <Download className="h-5 w-5" />
-                {sidebarOpen && <span className="ml-3">Export</span>}
+                <span className="inline-flex items-center gap-3">
+                  <Download className="h-5 w-5" />
+                  {sidebarOpen && <span>Export</span>}
+                </span>
               </NavLink>
             </TooltipTrigger>
             {!sidebarOpen && (
