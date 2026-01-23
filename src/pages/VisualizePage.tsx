@@ -279,7 +279,7 @@ export function VisualizePage() {
         const typeGroups = { capture: 0, note: 1, concept: 2 }
         const levelHeight = height / 4
 
-        nodes.forEach((node, i) => {
+        nodes.forEach((node) => {
           const typeIndex = typeGroups[node.type]
           const sameTypeNodes = nodes.filter(n => n.type === node.type)
           const indexInType = sameTypeNodes.indexOf(node)
