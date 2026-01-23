@@ -1,0 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Spectral:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+  /* Primary Backgrounds */
+  --color-obsidian: #0B0F14;
+  --color-charcoal-slate: #121923;
+  --color-ash-stone: #161E29;
+  
+  /* Primary Text */
+  --color-parchment: #E7E0D4;
+  --color-warm-gray: #B8B1A6;
+  
+  /* Accents */
+  --color-icon-gold: #C8A24A;
+  --color-oxide-red: #8B2C2C;
+  --color-verdigris: #2E6F68;
+  --color-deep-azure: #1E4E8C;
+  
+  /* shadcn/ui compatible colors */
+  --color-border: hsl(220 20% 18%);
+  --color-input: hsl(220 20% 18%);
+  --color-ring: hsl(43 52% 54%);
+  --color-background: hsl(220 30% 6%);
+  --color-foreground: hsl(35 25% 87%);
+  
+  --color-primary: hsl(43 52% 54%);
+  --color-primary-foreground: hsl(220 30% 6%);
+  
+  --color-secondary: hsl(220 25% 14%);
+  --color-secondary-foreground: hsl(35 25% 87%);
+  
+  --color-destructive: hsl(0 52% 36%);
+  --color-destructive-foreground: hsl(35 25% 87%);
+  
+  --color-muted: hsl(220 25% 14%);
+  --color-muted-foreground: hsl(35 15% 68%);
+  
+  --color-accent: hsl(220 25% 14%);
+  --color-accent-foreground: hsl(35 25% 87%);
+  
+  --color-popover: hsl(220 28% 10%);
+  --color-popover-foreground: hsl(35 25% 87%);
+  
+  --color-card: hsl(220 28% 10%);
+  --color-card-foreground: hsl(35 25% 87%);
+  
+  /* Font families */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Spectral', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Border radius */
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-obsidian text-parchment font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h4 {
+    @apply text-lg md:text-xl;
+  }
+
+  /* Code blocks */
+  pre, code {
+    @apply font-mono;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-charcoal-slate;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ash-stone rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-warm-gray/30;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-icon-gold/30 text-parchment;
+  }
+}
+
+@layer components {
+  /* Status pills */
+  .status-pill {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-new {
+    @apply bg-deep-azure/20 text-deep-azure border border-deep-azure/30;
+  }
+
+  .status-processing {
+    @apply bg-icon-gold/20 text-icon-gold border border-icon-gold/30;
+  }
+
+  .status-distilled {
+    @apply bg-verdigris/20 text-verdigris border border-verdigris/30;
+  }
+
+  .status-linked {
+    @apply bg-verdigris/30 text-verdigris border border-verdigris/50;
+  }
+
+  .status-published {
+    @apply bg-parchment/20 text-parchment border border-parchment/30;
+  }
+
+  /* Mastery levels */
+  .mastery-unknown {
+    @apply bg-warm-gray/20 text-warm-gray;
+  }
+
+  .mastery-learning {
+    @apply bg-deep-azure/20 text-deep-azure;
+  }
+
+  .mastery-solid {
+    @apply bg-verdigris/20 text-verdigris;
+  }
+
+  .mastery-teachable {
+    @apply bg-icon-gold/20 text-icon-gold;
+  }
+
+  /* Priority badges */
+  .priority-low {
+    @apply text-warm-gray;
+  }
+
+  .priority-medium {
+    @apply text-icon-gold;
+  }
+
+  .priority-high {
+    @apply text-oxide-red;
+  }
+
+  /* Card styles */
+  .knowledge-card {
+    @apply bg-charcoal-slate rounded-lg border border-ash-stone/50 p-4 transition-all duration-200;
+  }
+
+  .knowledge-card:hover {
+    @apply border-ash-stone bg-ash-stone/50;
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-icon-gold/50 focus:ring-offset-2 focus:ring-offset-obsidian;
+  }
+}
+
+@layer utilities {
+  /* Text utilities */
+  .text-gold {
+    @apply text-icon-gold;
+  }
+
+  .text-danger {
+    @apply text-oxide-red;
+  }
+
+  .text-success {
+    @apply text-verdigris;
+  }
+
+  .text-info {
+    @apply text-deep-azure;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-icon-gold to-parchment bg-clip-text text-transparent;
+  }
+
+  /* Subtle glow for important elements */
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(200, 162, 74, 0.15);
+  }
+}
