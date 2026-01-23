@@ -48,7 +48,7 @@ export function useSearch() {
           type: 'note',
           id: note.id,
           title: note.title,
-          subtitle: `Note - Confidence: ${note.confidence}/5`,
+          subtitle: `${note.note_type} - Confidence: ${note.confidence}/5`,
           item: note,
         })
       }

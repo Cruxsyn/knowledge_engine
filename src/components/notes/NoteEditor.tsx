@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { useNotes } from '@/hooks/useNotes'
 import { useConcepts } from '@/hooks/useConcepts'
@@ -6,13 +6,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { X, Star, Save } from 'lucide-react'
-import type { AtomicNote } from '@/types'
+import type { AtomicNote, NoteType, NoteContent } from '@/types'
+import { NOTE_TYPE_CONFIGS } from '@/types'
 
 interface NoteEditorProps {
   note?: AtomicNote
   onClose: () => void
+}
+
+function getDefaultContent(noteType: NoteType): NoteContent {
+  const config = NOTE_TYPE_CONFIGS.find(c => c.value === noteType)
+  if (!config) return { summary: '', key_claim: '' }
+  
+  const content: Record<string, string> = {}
+  for (const field of config.fields) {
+    content[field.name] = ''
+  }
+  return content as NoteContent
 }
 
 export function NoteEditor({ note, onClose }: NoteEditorProps) {
@@ -21,9 +34,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const { concepts } = useConcepts()
   
   const [title, setTitle] = useState(note?.title || '')
-  const [summary, setSummary] = useState(note?.summary || '')
-  const [keyClaim, setKeyClaim] = useState(note?.key_claim || '')
-  const [example, setExample] = useState(note?.example || '')
+  const [noteType, setNoteType] = useState<NoteType>(note?.note_type || 'definition')
+  const [content, setContent] = useState<Record<string, string>>(
+    (note?.content as Record<string, string>) || getDefaultContent('definition') as Record<string, string>
+  )
   const [confidence, setConfidence] = useState(note?.confidence || 3)
   const [selectedConcepts, setSelectedConcepts] = useState<string[]>(
     note?.concepts?.map(c => c.id) || []
@@ -31,27 +45,42 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isEditing = !!note
+  const typeConfig = NOTE_TYPE_CONFIGS.find(c => c.value === noteType)
+
+  // Reset content when type changes (only for new notes)
+  useEffect(() => {
+    if (!isEditing) {
+      setContent(getDefaultContent(noteType) as Record<string, string>)
+    }
+  }, [noteType, isEditing])
+
+  const updateContentField = (fieldName: string, value: string) => {
+    setContent(prev => ({ ...prev, [fieldName]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !summary.trim() || !keyClaim.trim()) return
+    if (!title.trim()) return
+
+    // Validate required fields
+    const requiredFields = typeConfig?.fields.filter(f => f.required) || []
+    const missingRequired = requiredFields.some(f => !content[f.name]?.trim())
+    if (missingRequired) return
 
     setIsSubmitting(true)
     try {
       if (isEditing) {
         updateNote(note.id, {
           title: title.trim(),
-          summary: summary.trim(),
-          key_claim: keyClaim.trim(),
-          example: example.trim() || undefined,
+          note_type: noteType,
+          content: content as NoteContent,
           confidence,
         })
       } else {
         const newNote = createNote({
           title: title.trim(),
-          summary: summary.trim(),
-          key_claim: keyClaim.trim(),
-          example: example.trim() || undefined,
+          note_type: noteType,
+          content: content as NoteContent,
           confidence,
           concept_ids: selectedConcepts,
         })
@@ -76,6 +105,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     )
   }
 
+  const isFormValid = () => {
+    if (!title.trim()) return false
+    const requiredFields = typeConfig?.fields.filter(f => f.required) || []
+    return !requiredFields.some(f => !content[f.name]?.trim())
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -90,51 +125,71 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Title *</Label>
           <Input
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="One idea, clearly named"
+            placeholder="Name this note"
             required
           />
         </div>
 
+        {/* Note Type Selector */}
         <div className="space-y-2">
-          <Label htmlFor="summary">Summary * (2-5 sentences)</Label>
-          <Textarea
-            id="summary"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="What does this mean? How would you explain it?"
-            rows={4}
-            required
-          />
+          <Label>Note Type</Label>
+          <Select value={noteType} onValueChange={(value) => setNoteType(value as NoteType)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {NOTE_TYPE_CONFIGS.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  <div className="flex flex-col">
+                    <span>{type.label}</span>
+                    <span className="text-xs text-warm-gray">{type.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="keyClaim">Key Claim *</Label>
-          <Input
-            id="keyClaim"
-            value={keyClaim}
-            onChange={(e) => setKeyClaim(e.target.value)}
-            placeholder="The core insight in one sentence"
-            required
-          />
-        </div>
+        {/* Dynamic Fields based on Note Type */}
+        {typeConfig && (
+          <div className="space-y-4 p-4 bg-ash-stone/20 rounded-lg">
+            <p className="text-xs text-warm-gray mb-2">{typeConfig.description}</p>
+            {typeConfig.fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={field.name}>
+                  {field.label} {field.required && '*'}
+                </Label>
+                {field.multiline ? (
+                  <Textarea
+                    id={field.name}
+                    value={content[field.name] || ''}
+                    onChange={(e) => updateContentField(field.name, e.target.value)}
+                    placeholder={field.placeholder}
+                    rows={4}
+                    required={field.required}
+                  />
+                ) : (
+                  <Input
+                    id={field.name}
+                    value={content[field.name] || ''}
+                    onChange={(e) => updateContentField(field.name, e.target.value)}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="example">Example / Application</Label>
-          <Textarea
-            id="example"
-            value={example}
-            onChange={(e) => setExample(e.target.value)}
-            placeholder="A concrete example or use case"
-            rows={3}
-          />
-        </div>
-
+        {/* Confidence Level */}
         <div className="space-y-2">
           <Label>Confidence Level</Label>
           <div className="flex items-center gap-1">
@@ -165,7 +220,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
         </div>
 
-        {!isEditing && concepts.length > 0 && (
+        {/* Link to Concepts */}
+        {concepts.length > 0 && (
           <div className="space-y-2">
             <Label>Link to Concepts</Label>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -187,17 +243,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </div>
           </div>
         )}
-
-        {/* Distillation Checklist */}
-        <div className="p-3 bg-ash-stone/30 rounded-lg space-y-2">
-          <Label className="text-icon-gold">Distillation Checklist</Label>
-          <ul className="text-sm text-warm-gray space-y-1">
-            <li>• What does this mean?</li>
-            <li>• What is it used for?</li>
-            <li>• What does it depend on?</li>
-            <li>• What are common mistakes?</li>
-          </ul>
-        </div>
       </form>
 
       {/* Footer */}
@@ -209,7 +254,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           variant="gold" 
           className="flex-1"
           onClick={handleSubmit}
-          disabled={!title.trim() || !summary.trim() || !keyClaim.trim() || isSubmitting}
+          disabled={!isFormValid() || isSubmitting}
         >
           <Save className="h-4 w-4 mr-2" />
           {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create Note'}

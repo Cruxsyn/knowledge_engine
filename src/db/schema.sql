@@ -30,9 +30,8 @@ CREATE TABLE IF NOT EXISTS captures (
 CREATE TABLE IF NOT EXISTS atomic_notes (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  summary TEXT NOT NULL DEFAULT '',
-  key_claim TEXT NOT NULL DEFAULT '',
-  example TEXT,
+  note_type TEXT NOT NULL DEFAULT 'other',
+  content TEXT NOT NULL DEFAULT '{}',
   confidence INTEGER NOT NULL DEFAULT 3,
   source_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

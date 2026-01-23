@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FormattedText } from '@/components/ui/formatted-text'
 import { formatDateTime } from '@/lib/utils'
 import { 
   X, 
@@ -17,6 +18,7 @@ import { ConceptEditor } from './ConceptEditor'
 import { LinkEditor } from './LinkEditor'
 import { ConceptGraph } from './ConceptGraph'
 import type { MasteryLevel } from '@/types'
+import { getNoteDisplayText } from '@/types'
 
 const masteryLevels: MasteryLevel[] = ['unknown', 'learning', 'solid', 'teachable']
 
@@ -111,20 +113,26 @@ export function ConceptDetail() {
 
         <div className="space-y-2">
           <Label className="text-warm-gray">Definition</Label>
-          <p className="text-parchment">{concept.definition}</p>
+          <div className="text-parchment">
+            <FormattedText>{concept.definition}</FormattedText>
+          </div>
         </div>
 
         {concept.intuition && (
           <div className="space-y-2">
             <Label className="text-warm-gray">Intuition</Label>
-            <p className="text-parchment">{concept.intuition}</p>
+            <div className="text-parchment">
+              <FormattedText>{concept.intuition}</FormattedText>
+            </div>
           </div>
         )}
 
         {concept.pitfalls && (
           <div className="space-y-2">
             <Label className="text-warm-gray">Common Pitfalls</Label>
-            <p className="text-parchment text-oxide-red/80">{concept.pitfalls}</p>
+            <div className="text-parchment text-oxide-red/80">
+              <FormattedText>{concept.pitfalls}</FormattedText>
+            </div>
           </div>
         )}
 
@@ -185,7 +193,9 @@ export function ConceptDetail() {
                   className="p-3 bg-ash-stone/30 rounded-lg"
                 >
                   <p className="font-medium text-parchment">{note.title}</p>
-                  <p className="text-sm text-warm-gray line-clamp-2">{note.summary}</p>
+                  <p className="text-sm text-warm-gray line-clamp-2">
+                    <FormattedText inline>{getNoteDisplayText(note).primary}</FormattedText>
+                  </p>
                 </div>
               ))}
             </div>

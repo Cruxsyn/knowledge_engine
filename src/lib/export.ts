@@ -2,14 +2,23 @@ import { getAllNotes } from '@/db/queries/notes'
 import { getAllConcepts, getConceptById } from '@/db/queries/concepts'
 import { getAllCaptures } from '@/db/queries/captures'
 import type { AtomicNote, Concept, Capture } from '@/types'
+import { NOTE_TYPE_CONFIGS } from '@/types'
 
 function noteToMarkdown(note: AtomicNote): string {
-  let md = `# ${note.title}\n\n`
-  md += `## Summary\n${note.summary}\n\n`
-  md += `## Key Claim\n${note.key_claim}\n\n`
+  const typeConfig = NOTE_TYPE_CONFIGS.find(c => c.value === note.note_type)
+  const content = note.content as Record<string, string>
   
-  if (note.example) {
-    md += `## Example / Application\n${note.example}\n\n`
+  let md = `# ${note.title}\n\n`
+  md += `**Type**: ${typeConfig?.label || note.note_type}\n\n`
+  
+  // Export type-specific content fields
+  if (typeConfig) {
+    for (const field of typeConfig.fields) {
+      const value = content[field.name]
+      if (value) {
+        md += `## ${field.label}\n${value}\n\n`
+      }
+    }
   }
   
   md += `## Metadata\n`

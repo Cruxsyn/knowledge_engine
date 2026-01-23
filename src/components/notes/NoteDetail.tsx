@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FormattedText } from '@/components/ui/formatted-text'
 import { formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { 
@@ -17,6 +18,8 @@ import {
   Edit2
 } from 'lucide-react'
 import { NoteEditor } from './NoteEditor'
+import { NOTE_TYPE_CONFIGS } from '@/types'
+import type { NoteType } from '@/types'
 
 export function NoteDetail() {
   const { selectedNote, setSelectedNote, triggerRefresh } = useAppStore()
@@ -26,6 +29,9 @@ export function NoteDetail() {
   const [isLinking, setIsLinking] = useState(false)
 
   if (!selectedNote) return null
+
+  const typeConfig = NOTE_TYPE_CONFIGS.find(c => c.value === selectedNote.note_type)
+  const content = selectedNote.content as Record<string, string>
 
   const handleClose = () => {
     setSelectedNote(null)
@@ -39,6 +45,11 @@ export function NoteDetail() {
 
   const handleUpdateConfidence = (confidence: number) => {
     updateNote(selectedNote.id, { confidence })
+    triggerRefresh()
+  }
+
+  const handleUpdateNoteType = (note_type: NoteType) => {
+    updateNote(selectedNote.id, { note_type })
     triggerRefresh()
   }
 
@@ -90,6 +101,23 @@ export function NoteDetail() {
             {selectedNote.title}
           </h2>
           
+          {/* Note Type */}
+          <div className="space-y-2 mb-4">
+            <Label className="text-warm-gray">Type</Label>
+            <Select value={selectedNote.note_type} onValueChange={(value) => handleUpdateNoteType(value as NoteType)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NOTE_TYPE_CONFIGS.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <span>{type.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Confidence Stars */}
           <div className="flex items-center gap-2 mb-4">
             <Label className="text-warm-gray text-sm">Confidence:</Label>
@@ -114,20 +142,22 @@ export function NoteDetail() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-warm-gray">Summary</Label>
-          <p className="text-parchment">{selectedNote.summary}</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-warm-gray">Key Claim</Label>
-          <p className="text-parchment italic">"{selectedNote.key_claim}"</p>
-        </div>
-
-        {selectedNote.example && (
-          <div className="space-y-2">
-            <Label className="text-warm-gray">Example / Application</Label>
-            <p className="text-parchment">{selectedNote.example}</p>
+        {/* Type-Specific Content Fields */}
+        {typeConfig && (
+          <div className="space-y-4">
+            {typeConfig.fields.map((field) => {
+              const value = content[field.name]
+              if (!value) return null
+              
+              return (
+                <div key={field.name} className="space-y-2">
+                  <Label className="text-warm-gray">{field.label}</Label>
+                  <div className="text-parchment">
+                    <FormattedText>{value}</FormattedText>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 

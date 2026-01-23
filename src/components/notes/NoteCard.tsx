@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { FormattedText } from '@/components/ui/formatted-text'
 import { useAppStore } from '@/stores/appStore'
 import { formatDate, truncate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { AtomicNote } from '@/types'
+import { NOTE_TYPE_CONFIGS, getNoteDisplayText } from '@/types'
 import { Star } from 'lucide-react'
 
 interface NoteCardProps {
@@ -13,6 +15,9 @@ interface NoteCardProps {
 export function NoteCard({ note }: NoteCardProps) {
   const { selectedNote, setSelectedNote } = useAppStore()
   const isSelected = selectedNote?.id === note.id
+
+  const typeConfig = NOTE_TYPE_CONFIGS.find(t => t.value === note.note_type)
+  const displayText = getNoteDisplayText(note)
 
   const renderConfidence = () => {
     return (
@@ -42,20 +47,27 @@ export function NoteCard({ note }: NoteCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base line-clamp-2">{note.title}</CardTitle>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                {typeConfig?.label || note.note_type}
+              </Badge>
+            </div>
+            <CardTitle className="text-base line-clamp-2">{note.title}</CardTitle>
+          </div>
           {renderConfidence()}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-warm-gray line-clamp-2">
-          {truncate(note.summary, 100)}
-        </p>
-        
-        {note.key_claim && (
-          <p className="text-sm text-parchment/80 italic line-clamp-2">
-            "{truncate(note.key_claim, 80)}"
-          </p>
+        {displayText.secondary && (
+          <div className="text-xs text-warm-gray/70 italic">
+            <FormattedText inline>{truncate(displayText.secondary, 60)}</FormattedText>
+          </div>
         )}
+        
+        <div className="text-sm text-warm-gray line-clamp-3">
+          <FormattedText inline>{truncate(displayText.primary, 150)}</FormattedText>
+        </div>
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-warm-gray">

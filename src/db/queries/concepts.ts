@@ -1,6 +1,6 @@
 import { query, queryOne, execute, transaction } from '../database'
 import { generateId } from '@/lib/utils'
-import type { Concept, MasteryLevel, CreateConcept, Link, RelationshipType } from '@/types'
+import type { Concept, MasteryLevel, CreateConcept, Link, RelationshipType, NoteType, NoteContent } from '@/types'
 
 interface ConceptRow {
   id: string
@@ -25,13 +25,20 @@ interface LinkRow {
 interface NoteRow {
   id: string
   title: string
-  summary: string
-  key_claim: string
-  example: string | null
+  note_type: string
+  content: string
   confidence: number
   created_at: string
   updated_at: string
   last_reviewed: string | null
+}
+
+function parseNoteContent(content: string): NoteContent {
+  try {
+    return JSON.parse(content)
+  } catch {
+    return { summary: '', key_claim: '' }
+  }
 }
 
 function rowToConcept(row: ConceptRow): Concept {
@@ -98,9 +105,8 @@ export function getConceptById(id: string): Concept | null {
   concept.notes = noteRows.map(n => ({
     id: n.id,
     title: n.title,
-    summary: n.summary,
-    key_claim: n.key_claim,
-    example: n.example || undefined,
+    note_type: (n.note_type || 'other') as NoteType,
+    content: parseNoteContent(n.content),
     confidence: n.confidence,
     created_at: n.created_at,
     updated_at: n.updated_at,

@@ -2,13 +2,54 @@ import { useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Download, Upload, FileText, Database, FolderDown } from 'lucide-react'
+import { Download, Upload, FileText, Database, FolderDown, RefreshCw, Trash2 } from 'lucide-react'
 import { useDatabase } from '@/hooks/useDatabase'
 import { exportAllAsMarkdown, exportConceptsAsMarkdown, exportNotesAsMarkdown } from '@/lib/export'
+import { resetAndSeedDatabase, clearDatabase } from '@/db/database'
+import { useAppStore } from '@/stores/appStore'
 
 export function ExportPage() {
   const { exportDb, importDb } = useDatabase()
   const [importing, setImporting] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const { triggerRefresh } = useAppStore()
+
+  const handleClearAllData = async () => {
+    if (!confirm('This will permanently delete ALL your notes and concepts. This cannot be undone. Continue?')) {
+      return
+    }
+    
+    setClearing(true)
+    try {
+      await clearDatabase()
+      triggerRefresh()
+      alert('All data cleared!')
+      window.location.reload()
+    } catch (err) {
+      alert('Failed to clear database.')
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  const handleResetWithTestData = async () => {
+    if (!confirm('This will delete all your current data and replace it with test data. Continue?')) {
+      return
+    }
+    
+    setResetting(true)
+    try {
+      await resetAndSeedDatabase()
+      triggerRefresh()
+      alert('Database reset with test data!')
+      window.location.reload()
+    } catch (err) {
+      alert('Failed to reset database.')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -100,6 +141,50 @@ export function ExportPage() {
               <p className="text-sm text-warm-gray">
                 Exports will be downloaded as a ZIP file containing organized Markdown files.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Developer Tools */}
+          <Card className="border-ash-stone/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-warm-gray" />
+                Developer Tools
+              </CardTitle>
+              <CardDescription>
+                Database management tools for testing and development.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearAllData}
+                  disabled={clearing}
+                  className="border-oxide-red/50 text-oxide-red hover:bg-oxide-red/10"
+                >
+                  <Trash2 className={`h-4 w-4 mr-2 ${clearing ? 'animate-pulse' : ''}`} />
+                  {clearing ? 'Clearing...' : 'Clear All Data'}
+                </Button>
+                <p className="text-xs text-warm-gray mt-1">
+                  Permanently deletes all notes and concepts.
+                </p>
+              </div>
+              
+              <div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleResetWithTestData}
+                  disabled={resetting}
+                  className="border-icon-gold/50 hover:bg-icon-gold/10"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${resetting ? 'animate-spin' : ''}`} />
+                  {resetting ? 'Resetting...' : 'Reset with Test Data'}
+                </Button>
+                <p className="text-xs text-warm-gray mt-1">
+                  Creates 6 concepts, 7 notes, and relationships between them.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

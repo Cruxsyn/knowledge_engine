@@ -1,13 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import { 
-  Inbox, 
   FileText, 
   Lightbulb, 
   Search, 
   Download,
   ChevronLeft,
   ChevronRight,
-  Plus
+  Terminal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,13 +14,13 @@ import { useAppStore } from '@/stores/appStore'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 const navItems = [
-  { to: '/', icon: Inbox, label: 'Inbox', shortcut: 'I' },
-  { to: '/notes', icon: FileText, label: 'Atomic Notes', shortcut: 'N' },
+  { to: '/terminal', icon: Terminal, label: 'Terminal', shortcut: 'T' },
+  { to: '/', icon: FileText, label: 'Atomic Notes', shortcut: 'N' },
   { to: '/concepts', icon: Lightbulb, label: 'Concepts', shortcut: 'C' },
 ]
 
 export function Sidebar() {
-  const { sidebarOpen, toggleSidebar, setQuickCaptureOpen, setSearchOpen } = useAppStore()
+  const { sidebarOpen, toggleSidebar, setSearchOpen } = useAppStore()
 
   return (
     <TooltipProvider>
@@ -50,26 +49,6 @@ export function Sidebar() {
 
         {/* Quick Actions */}
         <div className="p-3 space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="gold" 
-                className={cn("w-full", !sidebarOpen && "justify-center px-0")}
-                onClick={() => setQuickCaptureOpen(true)}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  {sidebarOpen && <span>Quick Capture</span>}
-                </span>
-              </Button>
-            </TooltipTrigger>
-            {!sidebarOpen && (
-              <TooltipContent side="right">
-                Quick Capture (Ctrl+Shift+N)
-              </TooltipContent>
-            )}
-          </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { FormattedText } from '@/components/ui/formatted-text'
 import { useAppStore } from '@/stores/appStore'
 import { truncate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -28,9 +29,9 @@ export function ConceptCard({ concept }: ConceptCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-warm-gray line-clamp-3">
-          {truncate(concept.definition, 150)}
-        </p>
+        <div className="text-sm text-warm-gray line-clamp-3">
+          <FormattedText inline>{truncate(concept.definition, 150)}</FormattedText>
+        </div>
 
         {concept.prerequisites && concept.prerequisites.length > 0 && (
           <div className="flex flex-wrap gap-1">

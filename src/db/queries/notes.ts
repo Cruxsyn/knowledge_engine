@@ -1,18 +1,21 @@
 import { query, queryOne, execute, transaction } from '../database'
 import { generateId } from '@/lib/utils'
-import type { AtomicNote, CreateAtomicNote, Concept } from '@/types'
+import type { AtomicNote, CreateAtomicNote, Concept, NoteType, NoteContent } from '@/types'
 
 interface NoteRow {
   id: string
   title: string
-  summary: string
-  key_claim: string
-  example: string | null
+  note_type: string
+  content: string
   confidence: number
   source_id: string | null
   created_at: string
   updated_at: string
   last_reviewed: string | null
+  // Legacy fields for migration
+  summary?: string
+  key_claim?: string
+  example?: string | null
 }
 
 interface ConceptRow {
@@ -26,13 +29,34 @@ interface ConceptRow {
   updated_at: string
 }
 
+function parseContent(row: NoteRow): NoteContent {
+  // Try to parse content as JSON
+  if (row.content && row.content !== '{}') {
+    try {
+      return JSON.parse(row.content)
+    } catch {
+      // Fall through to legacy handling
+    }
+  }
+  
+  // Legacy migration: convert old fields to new content format
+  if (row.summary || row.key_claim) {
+    return {
+      summary: row.summary || '',
+      key_claim: row.key_claim || '',
+      example: row.example || undefined,
+    }
+  }
+  
+  return { summary: '', key_claim: '' }
+}
+
 function rowToNote(row: NoteRow, concepts?: Concept[]): AtomicNote {
   return {
     id: row.id,
     title: row.title,
-    summary: row.summary,
-    key_claim: row.key_claim,
-    example: row.example || undefined,
+    note_type: (row.note_type || 'other') as NoteType,
+    content: parseContent(row),
     confidence: row.confidence,
     source_id: row.source_id || undefined,
     created_at: row.created_at,
@@ -109,12 +133,14 @@ export function getNotesNeedingReview(days: number = 7): AtomicNote[] {
 export function createNote(data: CreateAtomicNote): AtomicNote {
   const id = generateId()
   const now = new Date().toISOString()
+  const noteType = data.note_type || 'other'
+  const contentJson = JSON.stringify(data.content)
   
   transaction(() => {
     execute(`
-      INSERT INTO atomic_notes (id, title, summary, key_claim, example, confidence, source_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, data.title, data.summary, data.key_claim, data.example || null, data.confidence, data.source_id || null, now, now])
+      INSERT INTO atomic_notes (id, title, note_type, content, confidence, source_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, data.title, noteType, contentJson, data.confidence, data.source_id || null, now, now])
     
     // Link concepts if provided
     if (data.concept_ids && data.concept_ids.length > 0) {
@@ -142,17 +168,13 @@ export function updateNote(id: string, updates: Partial<Omit<AtomicNote, 'id' | 
     fields.push('title = ?')
     values.push(updates.title)
   }
-  if (updates.summary !== undefined) {
-    fields.push('summary = ?')
-    values.push(updates.summary)
+  if (updates.note_type !== undefined) {
+    fields.push('note_type = ?')
+    values.push(updates.note_type)
   }
-  if (updates.key_claim !== undefined) {
-    fields.push('key_claim = ?')
-    values.push(updates.key_claim)
-  }
-  if (updates.example !== undefined) {
-    fields.push('example = ?')
-    values.push(updates.example)
+  if (updates.content !== undefined) {
+    fields.push('content = ?')
+    values.push(JSON.stringify(updates.content))
   }
   if (updates.confidence !== undefined) {
     fields.push('confidence = ?')
@@ -200,11 +222,9 @@ export function searchNotes(searchTerm: string): AtomicNote[] {
   const rows = query<NoteRow>(`
     SELECT * FROM atomic_notes
     WHERE title LIKE ?
-       OR summary LIKE ?
-       OR key_claim LIKE ?
-       OR example LIKE ?
+       OR content LIKE ?
     ORDER BY created_at DESC
-  `, [pattern, pattern, pattern, pattern])
+  `, [pattern, pattern])
   return rows.map(row => rowToNote(row))
 }
 

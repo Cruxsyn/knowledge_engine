@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
-import { InboxPage } from '@/pages/InboxPage'
+import { TerminalPage } from '@/pages/TerminalPage'
 import { NotesPage } from '@/pages/NotesPage'
 import { ConceptsPage } from '@/pages/ConceptsPage'
 import { ExportPage } from '@/pages/ExportPage'
@@ -11,8 +11,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<InboxPage />} />
-          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/" element={<NotesPage />} />
+          <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/concepts" element={<ConceptsPage />} />
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/export" element={<ExportPage />} />

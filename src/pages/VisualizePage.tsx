@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useCaptures } from '@/hooks/useCaptures'
 import { useNotes } from '@/hooks/useNotes'
 import { useConcepts } from '@/hooks/useConcepts'
 import { useAppStore } from '@/stores/appStore'
@@ -8,20 +7,18 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { 
-  Network, 
-  GitBranch, 
-  Boxes, 
-  Layers,
   ZoomIn,
   ZoomOut,
   RotateCcw,
   Eye,
-  EyeOff
+  EyeOff,
+  Network
 } from 'lucide-react'
-import type { Capture, AtomicNote, Concept } from '@/types'
+import { FormattedText } from '@/components/ui/formatted-text'
+import type { AtomicNote, Concept } from '@/types'
+import { getNoteDisplayText } from '@/types'
 
-type ViewMode = 'graph' | 'network' | 'dimension'
-type NodeType = 'capture' | 'note' | 'concept'
+type NodeType = 'note' | 'concept'
 
 interface VisNode {
   id: string
@@ -29,62 +26,49 @@ interface VisNode {
   label: string
   x: number
   y: number
-  z?: number
   vx: number
   vy: number
   color: string
   size: number
-  data: Capture | AtomicNote | Concept
+  data: AtomicNote | Concept
 }
 
 interface VisEdge {
   from: string
   to: string
   color: string
-  strength: number
 }
-
-const VIEW_MODES = [
-  { id: 'graph' as ViewMode, icon: GitBranch, label: 'Graph View', description: 'Force-directed relationship graph' },
-  { id: 'network' as ViewMode, icon: Network, label: 'Network View', description: 'Hierarchical network layout' },
-  { id: 'dimension' as ViewMode, icon: Boxes, label: 'Dimension View', description: 'Multi-dimensional scatter' },
-]
 
 const NODE_COLORS = {
-  capture: '#C8A24A', // gold
-  note: '#2E6F68', // teal
-  concept: '#1E4E8C', // blue
+  note: '#4A9E8F', // matte teal
+  concept: '#5B7DB8', // matte blue
 }
 
-const NODE_SIZES = {
-  capture: 8,
-  note: 10,
-  concept: 12,
+const EDGE_COLORS = {
+  noteToContent: '#8B7355', // matte gold/brown
+  conceptToConcept: '#5B7DB8', // matte blue
 }
 
 export function VisualizePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('graph')
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [hoveredNode, setHoveredNode] = useState<VisNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<VisNode | null>(null)
-  const [showCaptures, setShowCaptures] = useState(true)
   const [showNotes, setShowNotes] = useState(true)
   const [showConcepts, setShowConcepts] = useState(true)
   
-  const { captures } = useCaptures()
   const { notes } = useNotes()
   const { concepts, getGraphData } = useConcepts()
-  const { setSelectedCapture, setSelectedNote, setSelectedConcept } = useAppStore()
+  const { setSelectedNote, setSelectedConcept } = useAppStore()
   
   const animationRef = useRef<number | undefined>(undefined)
   const nodesRef = useRef<VisNode[]>([])
   const edgesRef = useRef<VisEdge[]>([])
 
-  // Generate visualization nodes from all data
+  // Generate visualization nodes spread across the canvas
   const generateNodes = useMemo(() => {
     const nodes: VisNode[] = []
     const canvas = canvasRef.current
@@ -93,98 +77,94 @@ export function VisualizePage() {
     const centerX = width / 2
     const centerY = height / 2
 
-    if (showCaptures) {
-      captures.forEach((capture, i) => {
-        const angle = (i / Math.max(captures.length, 1)) * Math.PI * 2
-        const radius = Math.min(width, height) / 4
-        nodes.push({
-          id: `capture-${capture.id}`,
-          type: 'capture',
-          label: capture.title,
-          x: centerX + Math.cos(angle) * radius * 0.6 + (Math.random() - 0.5) * 100,
-          y: centerY + Math.sin(angle) * radius * 0.6 + (Math.random() - 0.5) * 100,
-          z: Math.random(),
-          vx: 0,
-          vy: 0,
-          color: NODE_COLORS.capture,
-          size: NODE_SIZES.capture,
-          data: capture,
-        })
-      })
+    const totalNodes = (showNotes ? notes.length : 0) + (showConcepts ? concepts.length : 0)
+    
+    // Spread nodes across the entire canvas with more spacing
+    const getSpreadPosition = (index: number, total: number) => {
+      const angle = (index / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.8
+      const maxRadius = Math.min(width, height) * 0.4
+      const minRadius = maxRadius * 0.2
+      const radius = minRadius + Math.random() * (maxRadius - minRadius)
+      
+      return {
+        x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 100,
+        y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 100,
+      }
     }
 
+    let nodeIndex = 0
+
     if (showNotes) {
-      notes.forEach((note, i) => {
-        const angle = (i / Math.max(notes.length, 1)) * Math.PI * 2 + Math.PI / 4
-        const radius = Math.min(width, height) / 3
+      notes.forEach((note) => {
+        const pos = getSpreadPosition(nodeIndex, totalNodes)
         nodes.push({
           id: `note-${note.id}`,
           type: 'note',
           label: note.title,
-          x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 80,
-          y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 80,
-          z: (note.confidence || 3) / 5,
+          x: pos.x,
+          y: pos.y,
           vx: 0,
           vy: 0,
           color: NODE_COLORS.note,
-          size: NODE_SIZES.note + (note.confidence || 3),
+          size: 8,
           data: note,
         })
+        nodeIndex++
       })
     }
 
     if (showConcepts) {
-      concepts.forEach((concept, i) => {
-        const angle = (i / Math.max(concepts.length, 1)) * Math.PI * 2 + Math.PI / 2
-        const radius = Math.min(width, height) / 2.5
-        const masteryMultiplier = concept.mastery === 'teachable' ? 1.5 : concept.mastery === 'solid' ? 1.2 : concept.mastery === 'learning' ? 1 : 0.8
+      concepts.forEach((concept) => {
+        const pos = getSpreadPosition(nodeIndex, totalNodes)
         nodes.push({
           id: `concept-${concept.id}`,
           type: 'concept',
           label: concept.name,
-          x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 60,
-          y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 60,
-          z: masteryMultiplier / 1.5,
+          x: pos.x,
+          y: pos.y,
           vx: 0,
           vy: 0,
           color: NODE_COLORS.concept,
-          size: NODE_SIZES.concept * masteryMultiplier,
+          size: 10,
           data: concept,
         })
+        nodeIndex++
       })
     }
 
     return nodes
-  }, [captures, notes, concepts, showCaptures, showNotes, showConcepts])
+  }, [notes, concepts, showNotes, showConcepts])
 
-  // Generate edges based on relationships
+  // Generate edges based on note-concept relationships
   const generateEdges = useMemo(() => {
     const edges: VisEdge[] = []
     const graphData = getGraphData()
 
     // Concept-to-concept relationships
-    graphData.edges.forEach(edge => {
-      edges.push({
-        from: `concept-${edge.from}`,
-        to: `concept-${edge.to}`,
-        color: '#1E4E8C',
-        strength: 1,
-      })
-    })
-
-    // Note-to-concept relationships (if concepts are linked to notes)
-    notes.forEach(note => {
-      if (note.concepts && showNotes && showConcepts) {
-        note.concepts.forEach(concept => {
-          edges.push({
-            from: `note-${note.id}`,
-            to: `concept-${concept.id}`,
-            color: '#2E6F68',
-            strength: 0.5,
-          })
+    if (showConcepts) {
+      graphData.edges.forEach(edge => {
+        edges.push({
+          from: `concept-${edge.from}`,
+          to: `concept-${edge.to}`,
+          color: EDGE_COLORS.conceptToConcept,
         })
-      }
-    })
+      })
+    }
+
+    // Note-to-concept relationships
+    if (showNotes && showConcepts) {
+      notes.forEach(note => {
+        if (note.concepts) {
+          note.concepts.forEach(concept => {
+            edges.push({
+              from: `note-${note.id}`,
+              to: `concept-${concept.id}`,
+              color: EDGE_COLORS.noteToContent,
+            })
+          })
+        }
+      })
+    }
 
     return edges
   }, [notes, showNotes, showConcepts, getGraphData])
@@ -214,6 +194,7 @@ export function VisualizePage() {
     updateSize()
     window.addEventListener('resize', updateSize)
 
+    // Force-directed simulation - more spread out
     const simulate = () => {
       const nodes = nodesRef.current
       const edges = edgesRef.current
@@ -222,97 +203,68 @@ export function VisualizePage() {
       const centerX = width / 2
       const centerY = height / 2
 
-      if (viewMode === 'graph') {
-        // Force-directed layout
-        const damping = 0.85
-        const repulsion = 3000
-        const attraction = 0.02
-        const centerForce = 0.003
+      const damping = 0.9
+      const repulsion = 8000 // Stronger repulsion for more spread
+      const attraction = 0.008 // Weaker attraction
+      const centerForce = 0.001
 
-        for (let i = 0; i < nodes.length; i++) {
-          const node = nodes[i]
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
 
-          // Repulsion from other nodes
-          for (let j = 0; j < nodes.length; j++) {
-            if (i === j) continue
-            const other = nodes[j]
-            const dx = node.x - other.x
-            const dy = node.y - other.y
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1
+        // Repulsion from other nodes - stronger and longer range
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue
+          const other = nodes[j]
+          const dx = node.x - other.x
+          const dy = node.y - other.y
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1
+          
+          if (dist < 400) { // Longer range repulsion
             const force = repulsion / (dist * dist)
-            node.vx += (dx / dist) * force * 0.1
-            node.vy += (dy / dist) * force * 0.1
+            node.vx += (dx / dist) * force * 0.05
+            node.vy += (dy / dist) * force * 0.05
           }
-
-          // Attraction to connected nodes
-          for (const edge of edges) {
-            let other: VisNode | undefined
-            if (edge.from === node.id) {
-              other = nodes.find(n => n.id === edge.to)
-            } else if (edge.to === node.id) {
-              other = nodes.find(n => n.id === edge.from)
-            }
-            if (other) {
-              const dx = other.x - node.x
-              const dy = other.y - node.y
-              node.vx += dx * attraction
-              node.vy += dy * attraction
-            }
-          }
-
-          // Center gravity
-          node.vx += (centerX - node.x) * centerForce
-          node.vy += (centerY - node.y) * centerForce
-
-          // Damping and update
-          node.vx *= damping
-          node.vy *= damping
-          node.x += node.vx
-          node.y += node.vy
-
-          // Bounds
-          node.x = Math.max(60, Math.min(width - 60, node.x))
-          node.y = Math.max(40, Math.min(height - 40, node.y))
         }
-      } else if (viewMode === 'network') {
-        // Hierarchical network layout
-        const typeGroups = { capture: 0, note: 1, concept: 2 }
-        const levelHeight = height / 4
 
-        nodes.forEach((node) => {
-          const typeIndex = typeGroups[node.type]
-          const sameTypeNodes = nodes.filter(n => n.type === node.type)
-          const indexInType = sameTypeNodes.indexOf(node)
-          const spacing = width / (sameTypeNodes.length + 1)
-          
-          const targetX = spacing * (indexInType + 1)
-          const targetY = 80 + typeIndex * levelHeight
+        // Attraction to connected nodes - gentle
+        for (const edge of edges) {
+          let other: VisNode | undefined
+          if (edge.from === node.id) {
+            other = nodes.find(n => n.id === edge.to)
+          } else if (edge.to === node.id) {
+            other = nodes.find(n => n.id === edge.from)
+          }
+          if (other) {
+            const dx = other.x - node.x
+            const dy = other.y - node.y
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1
+            // Only attract if far apart
+            if (dist > 150) {
+              const force = attraction * (dist - 150)
+              node.vx += (dx / dist) * force
+              node.vy += (dy / dist) * force
+            }
+          }
+        }
 
-          node.vx = (targetX - node.x) * 0.05
-          node.vy = (targetY - node.y) * 0.05
-          node.x += node.vx
-          node.y += node.vy
-        })
-      } else if (viewMode === 'dimension') {
-        // 3D-like scatter based on properties
-        nodes.forEach(node => {
-          // Use z coordinate for depth effect
-          const depth = node.z || 0.5
-          const scale = 0.5 + depth * 0.5
-          
-          // Slowly rotate the view
-          const time = Date.now() * 0.0001
-          const rotatedX = node.x - centerX
-          const rotatedY = node.y - centerY
-          
-          const targetX = centerX + rotatedX * Math.cos(time * 0.5) * scale
-          const targetY = centerY + rotatedY * scale
+        // Very gentle center gravity
+        node.vx += (centerX - node.x) * centerForce
+        node.vy += (centerY - node.y) * centerForce
 
-          node.vx = (targetX - node.x) * 0.02
-          node.vy = (targetY - node.y) * 0.02
-          node.x += node.vx
-          node.y += node.vy
-        })
+        // Apply damping
+        node.vx *= damping
+        node.vy *= damping
+
+        // Update position
+        node.x += node.vx
+        node.y += node.vy
+
+        // Soft bounds
+        const margin = 60
+        if (node.x < margin) node.vx += (margin - node.x) * 0.03
+        if (node.x > width - margin) node.vx -= (node.x - (width - margin)) * 0.03
+        if (node.y < margin) node.vy += (margin - node.y) * 0.03
+        if (node.y > height - margin) node.vy -= (node.y - (height - margin)) * 0.03
       }
     }
 
@@ -328,120 +280,59 @@ export function VisualizePage() {
       const nodes = nodesRef.current
       const edges = edgesRef.current
 
-      // Draw background grid for dimension view
-      if (viewMode === 'dimension') {
-        ctx.strokeStyle = 'rgba(46, 111, 104, 0.1)'
-        ctx.lineWidth = 1
-        for (let i = 0; i < canvas.width; i += 50) {
-          ctx.beginPath()
-          ctx.moveTo(i, 0)
-          ctx.lineTo(i, canvas.height)
-          ctx.stroke()
-        }
-        for (let i = 0; i < canvas.height; i += 50) {
-          ctx.beginPath()
-          ctx.moveTo(0, i)
-          ctx.lineTo(canvas.width, i)
-          ctx.stroke()
-        }
-      }
-
-      // Draw edges with glow
+      // Draw edges - simple straight lines
       for (const edge of edges) {
         const from = nodes.find(n => n.id === edge.from)
         const to = nodes.find(n => n.id === edge.to)
         if (from && to) {
-          // Glow effect
           ctx.strokeStyle = edge.color
-          ctx.lineWidth = 2
-          ctx.globalAlpha = 0.3
-          ctx.shadowColor = edge.color
-          ctx.shadowBlur = 10
+          ctx.lineWidth = 1.5
+          ctx.globalAlpha = 0.6
           ctx.beginPath()
           ctx.moveTo(from.x, from.y)
-          
-          if (viewMode === 'network') {
-            // Curved lines for network view
-            const midX = (from.x + to.x) / 2
-            const midY = (from.y + to.y) / 2 - 30
-            ctx.quadraticCurveTo(midX, midY, to.x, to.y)
-          } else {
-            ctx.lineTo(to.x, to.y)
-          }
+          ctx.lineTo(to.x, to.y)
           ctx.stroke()
-          ctx.shadowBlur = 0
           ctx.globalAlpha = 1
         }
       }
 
-      // Draw nodes with glow and depth
+      // Draw nodes - simple matte circles
       for (const node of nodes) {
         const isHovered = hoveredNode?.id === node.id
         const isSelected = selectedNode?.id === node.id
-        const size = node.size * (isHovered ? 1.3 : 1) * (isSelected ? 1.4 : 1)
-        const depth = viewMode === 'dimension' ? (node.z || 0.5) : 1
+        const size = node.size * (isHovered ? 1.2 : 1) * (isSelected ? 1.3 : 1)
         
-        // Outer glow
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2)
-        ctx.fillStyle = node.color
-        ctx.globalAlpha = 0.2 * depth
-        ctx.shadowColor = node.color
-        ctx.shadowBlur = isHovered ? 20 : 10
-        ctx.fill()
-        ctx.shadowBlur = 0
-        ctx.globalAlpha = 1
-
-        // Node circle
+        // Simple matte circle
         ctx.beginPath()
         ctx.arc(node.x, node.y, size, 0, Math.PI * 2)
         ctx.fillStyle = node.color
-        ctx.globalAlpha = 0.6 + depth * 0.4
-        ctx.fill()
-        ctx.globalAlpha = 1
-
-        // Inner highlight
-        ctx.beginPath()
-        ctx.arc(node.x - size * 0.3, node.y - size * 0.3, size * 0.4, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
         ctx.fill()
 
-        // Border
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, size, 0, Math.PI * 2)
-        ctx.strokeStyle = isSelected ? '#E7E0D4' : isHovered ? '#C8A24A' : '#161E29'
-        ctx.lineWidth = isSelected ? 3 : 2
-        ctx.stroke()
+        // Simple border for selected/hovered
+        if (isSelected || isHovered) {
+          ctx.beginPath()
+          ctx.arc(node.x, node.y, size + 2, 0, Math.PI * 2)
+          ctx.strokeStyle = isSelected ? '#E7E0D4' : '#A0937D'
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
 
         // Label
-        const labelOpacity = isHovered || isSelected ? 1 : viewMode === 'dimension' ? depth * 0.8 : 0.8
-        ctx.fillStyle = `rgba(231, 224, 212, ${labelOpacity})`
-        ctx.font = `${isHovered ? '12px' : '11px'} Inter, system-ui, sans-serif`
+        ctx.fillStyle = isHovered || isSelected ? '#E7E0D4' : 'rgba(231, 224, 212, 0.7)'
+        ctx.font = '10px Inter, system-ui, sans-serif'
         ctx.textAlign = 'center'
-        const label = node.label.length > 18 ? node.label.slice(0, 18) + '...' : node.label
-        ctx.fillText(label, node.x, node.y + size + 16)
-
-        // Type indicator
-        if (isHovered) {
-          ctx.fillStyle = 'rgba(200, 162, 74, 0.8)'
-          ctx.font = '9px Inter, system-ui, sans-serif'
-          ctx.fillText(node.type.toUpperCase(), node.x, node.y + size + 28)
-        }
+        const label = node.label.length > 20 ? node.label.slice(0, 20) + '...' : node.label
+        ctx.fillText(label, node.x, node.y + size + 14)
       }
 
       ctx.restore()
     }
 
-    let frameCount = 0
-    const maxFrames = viewMode === 'dimension' ? Infinity : 300
-
+    // Continuous simulation
     const animate = () => {
       simulate()
       draw()
-      frameCount++
-      if (frameCount < maxFrames) {
-        animationRef.current = requestAnimationFrame(animate)
-      }
+      animationRef.current = requestAnimationFrame(animate)
     }
 
     animate()
@@ -500,10 +391,7 @@ export function VisualizePage() {
         if (dx * dx + dy * dy < (node.size + 5) * (node.size + 5)) {
           setSelectedNode(node)
           
-          // Open detail panel based on type
-          if (node.type === 'capture') {
-            setSelectedCapture(node.data as Capture)
-          } else if (node.type === 'note') {
+          if (node.type === 'note') {
             setSelectedNote(node.data as AtomicNote)
           } else if (node.type === 'concept') {
             setSelectedConcept(node.data as Concept)
@@ -539,32 +427,34 @@ export function VisualizePage() {
       canvas.removeEventListener('click', handleClick)
       canvas.removeEventListener('wheel', handleWheel)
     }
-  }, [viewMode, zoom, offset, isDragging, dragStart, hoveredNode, selectedNode, setSelectedCapture, setSelectedNote, setSelectedConcept])
+  }, [zoom, offset, isDragging, dragStart, hoveredNode, selectedNode, setSelectedNote, setSelectedConcept])
 
   const resetView = () => {
     setZoom(1)
     setOffset({ x: 0, y: 0 })
     setSelectedNode(null)
-    // Regenerate nodes
     nodesRef.current = generateNodes
     edgesRef.current = generateEdges
   }
 
-  const totalItems = (showCaptures ? captures.length : 0) + (showNotes ? notes.length : 0) + (showConcepts ? concepts.length : 0)
+  const totalItems = (showNotes ? notes.length : 0) + (showConcepts ? concepts.length : 0)
 
   return (
     <div className="h-full flex flex-col bg-deep-obsidian">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-ash-stone/50">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-2xl font-serif text-parchment">Visualize</h1>
+            <h1 className="text-2xl font-serif text-parchment flex items-center gap-2">
+              <Network className="h-6 w-6 text-icon-gold" />
+              Knowledge Network
+            </h1>
             <p className="text-sm text-warm-gray mt-1">
-              Explore {totalItems} items across your knowledge base
+              {totalItems} items • {edgesRef.current.length} connections
             </p>
           </div>
           
-          {/* Zoom controls */}
+          {/* Controls */}
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>
               <ZoomIn className="h-4 w-4" />
@@ -579,37 +469,8 @@ export function VisualizePage() {
           </div>
         </div>
 
-        {/* View mode selector */}
-        <div className="flex gap-2 flex-wrap">
-          {VIEW_MODES.map(mode => (
-            <Button
-              key={mode.id}
-              variant={viewMode === mode.id ? 'gold' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setViewMode(mode.id)
-                resetView()
-              }}
-              className="gap-2"
-            >
-              <mode.icon className="h-4 w-4" />
-              {mode.label}
-            </Button>
-          ))}
-        </div>
-
         {/* Filter toggles */}
-        <div className="flex gap-3 mt-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowCaptures(!showCaptures)}
-            className={cn("gap-2", !showCaptures && "opacity-50")}
-          >
-            {showCaptures ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: NODE_COLORS.capture }} />
-            Captures ({captures.length})
-          </Button>
+        <div className="flex gap-3">
           <Button
             variant="ghost"
             size="sm"
@@ -638,22 +499,13 @@ export function VisualizePage() {
         <canvas
           ref={canvasRef}
           className="w-full h-full"
-          style={{ background: 'linear-gradient(180deg, #0B0F14 0%, #161E29 100%)' }}
+          style={{ background: '#0D1117' }}
         />
 
-        {/* View description */}
+        {/* Help text */}
         <div className="absolute bottom-4 left-4">
           <Card className="p-3 bg-charcoal-slate/90 border-ash-stone/50 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-sm">
-              <Layers className="h-4 w-4 text-icon-gold" />
-              <span className="text-parchment font-medium">
-                {VIEW_MODES.find(m => m.id === viewMode)?.label}
-              </span>
-            </div>
-            <p className="text-xs text-warm-gray mt-1">
-              {VIEW_MODES.find(m => m.id === viewMode)?.description}
-            </p>
-            <p className="text-xs text-warm-gray mt-2">
+            <p className="text-xs text-warm-gray">
               Scroll to zoom • Drag to pan • Click nodes to select
             </p>
           </Card>
@@ -681,25 +533,16 @@ export function VisualizePage() {
               </div>
               <h3 className="text-parchment font-medium mb-2">{selectedNode.label}</h3>
               
-              {selectedNode.type === 'capture' && (
-                <p className="text-sm text-warm-gray line-clamp-3">
-                  {(selectedNode.data as Capture).content}
-                </p>
-              )}
               {selectedNode.type === 'note' && (
-                <p className="text-sm text-warm-gray line-clamp-3">
-                  {(selectedNode.data as AtomicNote).summary}
-                </p>
+                <div className="text-sm text-warm-gray line-clamp-3">
+                  <FormattedText inline>{getNoteDisplayText(selectedNode.data as AtomicNote).primary}</FormattedText>
+                </div>
               )}
               {selectedNode.type === 'concept' && (
-                <p className="text-sm text-warm-gray line-clamp-3">
-                  {(selectedNode.data as Concept).definition}
-                </p>
+                <div className="text-sm text-warm-gray line-clamp-3">
+                  <FormattedText inline>{(selectedNode.data as Concept).definition}</FormattedText>
+                </div>
               )}
-              
-              <p className="text-xs text-warm-gray/70 mt-3">
-                Click to view full details in side panel
-              </p>
             </Card>
           </div>
         )}
@@ -708,10 +551,10 @@ export function VisualizePage() {
         {totalItems === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <Boxes className="h-12 w-12 text-warm-gray mx-auto mb-4" />
+              <Network className="h-12 w-12 text-warm-gray mx-auto mb-4" />
               <h3 className="text-parchment font-medium mb-2">No data to visualize</h3>
               <p className="text-sm text-warm-gray">
-                Start by adding captures, notes, or concepts
+                Add notes and concepts to see your knowledge network
               </p>
             </div>
           </div>
