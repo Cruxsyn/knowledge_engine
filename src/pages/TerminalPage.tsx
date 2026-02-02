@@ -67,7 +67,8 @@ export function TerminalPage() {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<CommandHistory[]>([
     { type: 'output', text: 'Arkvim Terminal v1.0', timestamp: new Date() },
-    { type: 'output', text: 'Type "help" for available commands.\n', timestamp: new Date() },
+    { type: 'output', text: 'Type "help" for available commands.', timestamp: new Date() },
+    { type: 'output', text: 'Tip: Paste multiple commands at once (one per line).\n', timestamp: new Date() },
   ])
   const [showPreview, setShowPreview] = useState(true)
   const [showDocs, setShowDocs] = useState(false)
@@ -75,12 +76,30 @@ export function TerminalPage() {
   const [draftConcept, setDraftConcept] = useState<DraftConcept | null>(null)
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
-  
-  const inputRef = useRef<HTMLInputElement>(null)
+
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLDivElement>(null)
-  
+
+  // Refs to track draft state during batch processing (React state is async)
+  const draftNoteRef = useRef<DraftNote | null>(null)
+  const draftConceptRef = useRef<DraftConcept | null>(null)
+  const historyRef = useRef<CommandHistory[]>([])
+
   const { notes, createNote } = useNotes()
   const { concepts, createConcept } = useConcepts()
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    draftNoteRef.current = draftNote
+  }, [draftNote])
+
+  useEffect(() => {
+    draftConceptRef.current = draftConcept
+  }, [draftConcept])
+
+  useEffect(() => {
+    historyRef.current = history
+  }, [history])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -94,15 +113,91 @@ export function TerminalPage() {
     inputRef.current?.focus()
   }, [])
 
+  // Add output using ref for immediate access in batch processing
+  const addOutputImmediate = (text: string, type: CommandHistory['type'] = 'output') => {
+    const newEntry = { type, text, timestamp: new Date() }
+    historyRef.current = [...historyRef.current, newEntry]
+    return newEntry
+  }
+
   const addOutput = (text: string, type: CommandHistory['type'] = 'output') => {
+    addOutputImmediate(text, type)
     setHistory(prev => [...prev, { type, text, timestamp: new Date() }])
+  }
+
+  // Process a single command using refs (for batch processing)
+  const processCommandImmediate = (cmd: string): void => {
+    const trimmed = cmd.trim()
+    if (!trimmed) return
+
+    // Echo the command
+    addOutputImmediate(`> ${trimmed}`, 'input')
+
+    const parts = trimmed.split(' ')
+    const command = parts[0].toLowerCase()
+    const subCommand = parts[1]?.toLowerCase()
+    const args = parts.slice(2).join(' ')
+
+    switch (command) {
+      case 'help':
+        addOutputImmediate(HELP_TEXT)
+        break
+
+      case 'clear':
+        historyRef.current = []
+        break
+
+      case 'note':
+        handleNoteCommandImmediate(subCommand, args)
+        break
+
+      case 'concept':
+        handleConceptCommandImmediate(subCommand, args)
+        break
+
+      case 'list':
+        handleListCommandImmediate(subCommand)
+        break
+
+      default:
+        addOutputImmediate(`Unknown command: ${command}. Type "help" for available commands.`, 'error')
+    }
+  }
+
+  // Process multiple commands in batch, then sync state at the end
+  const processBatchCommands = (commands: string[]) => {
+    // Filter out empty lines and process each command
+    const validCommands = commands.filter(cmd => cmd.trim())
+
+    if (validCommands.length === 0) return
+
+    // Add all valid commands to command history
+    setCommandHistory(prev => [...prev, ...validCommands])
+    setHistoryIndex(-1)
+
+    // Process each command using refs
+    for (const cmd of validCommands) {
+      processCommandImmediate(cmd)
+    }
+
+    // Sync all state from refs
+    setHistory([...historyRef.current])
+    setDraftNote(draftNoteRef.current)
+    setDraftConcept(draftConceptRef.current)
   }
 
   const processCommand = (cmd: string) => {
     const trimmed = cmd.trim()
     if (!trimmed) return
 
-    // Add to command history
+    // Check for multi-line input
+    const lines = trimmed.split('\n')
+    if (lines.length > 1) {
+      processBatchCommands(lines)
+      return
+    }
+
+    // Single command - use normal state-based processing
     setCommandHistory(prev => [...prev, trimmed])
     setHistoryIndex(-1)
 
@@ -427,18 +522,300 @@ export function TerminalPage() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  // ============ IMMEDIATE HANDLERS (for batch processing with refs) ============
+
+  const handleNoteCommandImmediate = (subCommand: string, args: string) => {
+    switch (subCommand) {
+      case 'new':
+        draftNoteRef.current = {
+          title: '',
+          note_type: 'definition',
+          content: getDefaultContent('definition'),
+          confidence: 3,
+          concept_ids: [],
+        }
+        addOutputImmediate('Started new note draft (type: definition). Use "note title <text>" to set title.', 'success')
+        addOutputImmediate('Use "note fields" to see available fields for this type.', 'output')
+        break
+
+      case 'title':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        if (!args) {
+          addOutputImmediate('Please provide a title: note title <text>', 'error')
+          return
+        }
+        draftNoteRef.current = { ...draftNoteRef.current, title: args }
+        addOutputImmediate(`Title set: "${args}"`, 'success')
+        break
+
+      case 'type':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        const validTypes = NOTE_TYPE_CONFIGS.map(t => t.value)
+        const typeArg = args.toLowerCase() as NoteType
+        if (!validTypes.includes(typeArg)) {
+          addOutputImmediate(`Invalid type. Valid types: ${validTypes.join(', ')}`, 'error')
+          return
+        }
+        draftNoteRef.current = { ...draftNoteRef.current, note_type: typeArg, content: getDefaultContent(typeArg) }
+        const newConfig = getTypeConfig(typeArg)
+        addOutputImmediate(`Type set to: ${newConfig?.label}. Fields: ${newConfig?.fields.map(f => f.name).join(', ')}`, 'success')
+        break
+
+      case 'fields':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        const config = getTypeConfig(draftNoteRef.current.note_type)
+        if (config) {
+          const fieldList = config.fields.map(f => `  ${f.name}${f.required ? '*' : ''}: ${f.placeholder}`).join('\n')
+          addOutputImmediate(`Fields for ${config.label}:\n${fieldList}\n\nUse: note set <field> <value>`)
+        }
+        break
+
+      case 'set':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        const parts = args.split(' ')
+        const fieldName = parts[0]?.toLowerCase()
+        const fieldValue = parts.slice(1).join(' ')
+
+        const typeConfig = getTypeConfig(draftNoteRef.current.note_type)
+        const field = typeConfig?.fields.find(f => f.name.toLowerCase() === fieldName)
+
+        if (!field) {
+          const availableFields = typeConfig?.fields.map(f => f.name).join(', ') || 'none'
+          addOutputImmediate(`Unknown field "${fieldName}". Available: ${availableFields}`, 'error')
+          return
+        }
+        if (!fieldValue) {
+          addOutputImmediate(`Please provide a value: note set ${fieldName} <value>`, 'error')
+          return
+        }
+
+        draftNoteRef.current = {
+          ...draftNoteRef.current,
+          content: { ...draftNoteRef.current.content, [field.name]: fieldValue }
+        }
+        addOutputImmediate(`${field.label} set.`, 'success')
+        break
+
+      case 'confidence':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        const conf = parseInt(args)
+        if (isNaN(conf) || conf < 1 || conf > 5) {
+          addOutputImmediate('Confidence must be between 1 and 5.', 'error')
+          return
+        }
+        draftNoteRef.current = { ...draftNoteRef.current, confidence: conf }
+        addOutputImmediate(`Confidence set to ${conf}.`, 'success')
+        break
+
+      case 'link':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        if (!args) {
+          addOutputImmediate('Please provide a concept name: note link <concept name>', 'error')
+          return
+        }
+        const concept = concepts.find(c => c.name.toLowerCase() === args.toLowerCase())
+        if (!concept) {
+          addOutputImmediate(`Concept "${args}" not found. Available: ${concepts.map(c => c.name).join(', ')}`, 'error')
+          return
+        }
+        if (draftNoteRef.current.concept_ids.includes(concept.id)) {
+          addOutputImmediate(`Already linked to "${concept.name}".`, 'error')
+          return
+        }
+        draftNoteRef.current = { ...draftNoteRef.current, concept_ids: [...draftNoteRef.current.concept_ids, concept.id] }
+        addOutputImmediate(`Linked to concept: "${concept.name}"`, 'success')
+        break
+
+      case 'save':
+        if (!draftNoteRef.current) {
+          addOutputImmediate('No draft note. Use "note new" first.', 'error')
+          return
+        }
+        if (!draftNoteRef.current.title) {
+          addOutputImmediate('Missing required field: title', 'error')
+          return
+        }
+        const saveConfig = getTypeConfig(draftNoteRef.current.note_type)
+        const requiredFields = saveConfig?.fields.filter(f => f.required) || []
+        const missingFields = requiredFields.filter(f => !draftNoteRef.current!.content[f.name]?.trim())
+        if (missingFields.length > 0) {
+          addOutputImmediate(`Missing required fields: ${missingFields.map(f => f.name).join(', ')}`, 'error')
+          return
+        }
+        const newNote = createNote({
+          title: draftNoteRef.current.title,
+          note_type: draftNoteRef.current.note_type,
+          content: draftNoteRef.current.content as NoteContent,
+          confidence: draftNoteRef.current.confidence,
+          concept_ids: draftNoteRef.current.concept_ids,
+        })
+        if (newNote) {
+          addOutputImmediate(`Note saved: "${newNote.title}" (${saveConfig?.label})`, 'success')
+          draftNoteRef.current = null
+        } else {
+          addOutputImmediate('Failed to save note.', 'error')
+        }
+        break
+
+      case 'clear':
+        draftNoteRef.current = null
+        addOutputImmediate('Draft note cleared.', 'success')
+        break
+
+      default:
+        addOutputImmediate('Unknown note command. Use: new, title, type, set, fields, confidence, link, save, clear', 'error')
+    }
+  }
+
+  const handleConceptCommandImmediate = (subCommand: string, args: string) => {
+    switch (subCommand) {
+      case 'new':
+        draftConceptRef.current = {
+          name: '',
+          definition: '',
+        }
+        addOutputImmediate('Started new concept draft. Use "concept name <text>" to set name.', 'success')
+        break
+
+      case 'name':
+        if (!draftConceptRef.current) {
+          addOutputImmediate('No draft concept. Use "concept new" first.', 'error')
+          return
+        }
+        if (!args) {
+          addOutputImmediate('Please provide a name: concept name <text>', 'error')
+          return
+        }
+        draftConceptRef.current = { ...draftConceptRef.current, name: args }
+        addOutputImmediate(`Name set: "${args}"`, 'success')
+        break
+
+      case 'def':
+      case 'definition':
+        if (!draftConceptRef.current) {
+          addOutputImmediate('No draft concept. Use "concept new" first.', 'error')
+          return
+        }
+        if (!args) {
+          addOutputImmediate('Please provide a definition: concept def <text>', 'error')
+          return
+        }
+        draftConceptRef.current = { ...draftConceptRef.current, definition: args }
+        addOutputImmediate(`Definition set.`, 'success')
+        break
+
+      case 'intuition':
+        if (!draftConceptRef.current) {
+          addOutputImmediate('No draft concept. Use "concept new" first.', 'error')
+          return
+        }
+        draftConceptRef.current = { ...draftConceptRef.current, intuition: args || undefined }
+        addOutputImmediate(`Intuition set.`, 'success')
+        break
+
+      case 'pitfalls':
+        if (!draftConceptRef.current) {
+          addOutputImmediate('No draft concept. Use "concept new" first.', 'error')
+          return
+        }
+        draftConceptRef.current = { ...draftConceptRef.current, pitfalls: args || undefined }
+        addOutputImmediate(`Pitfalls set.`, 'success')
+        break
+
+      case 'save':
+        if (!draftConceptRef.current) {
+          addOutputImmediate('No draft concept. Use "concept new" first.', 'error')
+          return
+        }
+        if (!draftConceptRef.current.name || !draftConceptRef.current.definition) {
+          addOutputImmediate('Missing required fields: name, definition', 'error')
+          return
+        }
+        const newConcept = createConcept({
+          name: draftConceptRef.current.name,
+          definition: draftConceptRef.current.definition,
+          intuition: draftConceptRef.current.intuition,
+          pitfalls: draftConceptRef.current.pitfalls,
+        })
+        if (newConcept) {
+          addOutputImmediate(`Concept saved: "${newConcept.name}"`, 'success')
+          draftConceptRef.current = null
+        } else {
+          addOutputImmediate('Failed to save concept.', 'error')
+        }
+        break
+
+      case 'clear':
+        draftConceptRef.current = null
+        addOutputImmediate('Draft concept cleared.', 'success')
+        break
+
+      default:
+        addOutputImmediate('Unknown concept command. Use: new, name, def, intuition, pitfalls, save, clear', 'error')
+    }
+  }
+
+  const handleListCommandImmediate = (subCommand: string) => {
+    switch (subCommand) {
+      case 'notes':
+        if (notes.length === 0) {
+          addOutputImmediate('No notes found.')
+          return
+        }
+        const noteList = notes.map((n, i) => `  ${i + 1}. ${n.title} (confidence: ${n.confidence})`).join('\n')
+        addOutputImmediate(`Notes (${notes.length}):\n${noteList}`)
+        break
+
+      case 'concepts':
+        if (concepts.length === 0) {
+          addOutputImmediate('No concepts found.')
+          return
+        }
+        const conceptList = concepts.map((c, i) => `  ${i + 1}. ${c.name} [${c.mastery}]`).join('\n')
+        addOutputImmediate(`Concepts (${concepts.length}):\n${conceptList}`)
+        break
+
+      default:
+        addOutputImmediate('Unknown list command. Use: notes, concepts', 'error')
+    }
+  }
+
+  // ============ END IMMEDIATE HANDLERS ============
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter without Shift = submit, Shift+Enter = new line
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
       processCommand(input)
       setInput('')
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === 'ArrowUp' && !input.includes('\n')) {
+      // Only navigate history if single line
       e.preventDefault()
       if (commandHistory.length > 0) {
         const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex
         setHistoryIndex(newIndex)
         setInput(commandHistory[commandHistory.length - 1 - newIndex] || '')
       }
-    } else if (e.key === 'ArrowDown') {
+    } else if (e.key === 'ArrowDown' && !input.includes('\n')) {
+      // Only navigate history if single line
       e.preventDefault()
       if (historyIndex > 0) {
         const newIndex = historyIndex - 1
@@ -720,8 +1097,10 @@ export function TerminalPage() {
             <div className="pt-4 border-t border-ash-stone/30">
               <h4 className="text-xs font-medium text-warm-gray uppercase tracking-wide mb-2">Tips</h4>
               <ul className="text-xs text-warm-gray/70 space-y-1">
-                <li>• Use ↑/↓ arrows for command history</li>
-                <li>• Notes need: title, summary, claim</li>
+                <li>• <strong className="text-icon-gold">Paste multiple commands</strong> at once</li>
+                <li>• Shift+Enter for new line</li>
+                <li>• Enter to run all commands</li>
+                <li>• Use ↑/↓ arrows for history</li>
                 <li>• Concepts need: name, def</li>
                 <li>• Formatting renders in Preview</li>
               </ul>
@@ -755,22 +1134,22 @@ export function TerminalPage() {
 
           {/* Input */}
           <div className="flex-shrink-0 p-4 border-t border-ash-stone/50">
-            <div className="flex items-center gap-2 bg-charcoal-slate rounded-md px-3 py-2">
-              <span className="text-icon-gold font-mono">{'>'}</span>
-              <input
+            <div className="flex gap-2 bg-charcoal-slate rounded-md px-3 py-2">
+              <span className="text-icon-gold font-mono mt-0.5">{'>'}</span>
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent border-none outline-none text-parchment font-mono text-sm placeholder:text-warm-gray/50"
-                placeholder="Type a command..."
+                rows={input.includes('\n') ? Math.min(input.split('\n').length, 10) : 1}
+                className="flex-1 bg-transparent border-none outline-none text-parchment font-mono text-sm placeholder:text-warm-gray/50 resize-none min-h-[24px]"
+                placeholder="Type a command... (paste multiple lines, Shift+Enter for new line)"
                 autoFocus
               />
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-6 w-6 self-end"
                 onClick={() => {
                   processCommand(input)
                   setInput('')
@@ -779,6 +1158,11 @@ export function TerminalPage() {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+            {input.includes('\n') && (
+              <p className="text-xs text-warm-gray/50 mt-1 ml-6">
+                {input.split('\n').filter(l => l.trim()).length} commands ready • Press Enter to run all
+              </p>
+            )}
           </div>
         </div>
 

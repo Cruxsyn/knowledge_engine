@@ -1,16 +1,18 @@
 import { NavLink } from 'react-router-dom'
-import { 
-  FileText, 
-  Lightbulb, 
-  Search, 
+import {
+  FileText,
+  Lightbulb,
+  Search,
   Download,
   ChevronLeft,
   ChevronRight,
-  Terminal
+  Terminal,
+  Share2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/stores/appStore'
+import { useShareStore } from '@/stores/shareStore'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 const navItems = [
@@ -21,6 +23,7 @@ const navItems = [
 
 export function Sidebar() {
   const { sidebarOpen, toggleSidebar, setSearchOpen } = useAppStore()
+  const { setOpen: setShareOpen } = useShareStore()
 
   return (
     <TooltipProvider>
@@ -125,7 +128,31 @@ export function Sidebar() {
         </nav>
 
         {/* Bottom section */}
-        <div className="p-3 border-t border-ash-stone/50">
+        <div className="p-3 border-t border-ash-stone/50 space-y-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={() => setShareOpen(true)}
+                className={cn(
+                  "w-full justify-start px-3 py-2 h-auto text-sm font-medium",
+                  "hover:bg-ash-stone/50 hover:text-parchment text-warm-gray",
+                  !sidebarOpen && "justify-center px-0"
+                )}
+              >
+                <span className="inline-flex items-center gap-3">
+                  <Share2 className="h-5 w-5" />
+                  {sidebarOpen && <span>Share</span>}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            {!sidebarOpen && (
+              <TooltipContent side="right">
+                Share Knowledge
+              </TooltipContent>
+            )}
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <NavLink

@@ -1,22 +1,9 @@
 import { useConcepts } from '@/hooks/useConcepts'
 import { ConceptCard } from './ConceptCard'
 import { Loader2, Lightbulb } from 'lucide-react'
-import type { MasteryLevel } from '@/types'
 
-interface ConceptListProps {
-  viewMode: MasteryLevel | 'all' | 'missing-prereqs' | 'missing-examples'
-}
-
-export function ConceptList({ viewMode }: ConceptListProps) {
-  const { concepts, loading, error, getConceptsWithoutPrerequisites, getConceptsWithoutExamples } = useConcepts()
-
-  let displayConcepts = concepts
-  
-  if (viewMode === 'missing-prereqs') {
-    displayConcepts = getConceptsWithoutPrerequisites()
-  } else if (viewMode === 'missing-examples') {
-    displayConcepts = getConceptsWithoutExamples()
-  }
+export function ConceptList() {
+  const { concepts, loading, error } = useConcepts()
 
   if (loading) {
     return (
@@ -35,17 +22,13 @@ export function ConceptList({ viewMode }: ConceptListProps) {
     )
   }
 
-  if (displayConcepts.length === 0) {
+  if (concepts.length === 0) {
     return (
       <div className="text-center py-12">
         <Lightbulb className="h-12 w-12 mx-auto text-warm-gray/50 mb-4" />
-        <h3 className="text-lg font-medium text-parchment mb-2">
-          {viewMode === 'all' ? 'No concepts yet' : `No concepts ${viewMode.replace('-', ' ')}`}
-        </h3>
+        <h3 className="text-lg font-medium text-parchment mb-2">No concepts yet</h3>
         <p className="text-warm-gray">
-          {viewMode === 'all' 
-            ? 'Create your first concept to start building your knowledge graph'
-            : 'All concepts meet the requirements'}
+          Create your first concept to start building your knowledge graph
         </p>
       </div>
     )
@@ -53,7 +36,7 @@ export function ConceptList({ viewMode }: ConceptListProps) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {displayConcepts.map((concept) => (
+      {concepts.map((concept) => (
         <ConceptCard key={concept.id} concept={concept} />
       ))}
     </div>

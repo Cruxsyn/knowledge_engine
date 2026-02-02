@@ -71,7 +71,32 @@ export function getAllNotes(): AtomicNote[] {
     SELECT * FROM atomic_notes
     ORDER BY created_at DESC
   `)
-  return rows.map(row => rowToNote(row))
+
+  // Get all note-concept relationships in one query
+  const conceptLinks = query<{ note_id: string; concept_id: string; name: string; definition: string; intuition: string | null; pitfalls: string | null; mastery: string; created_at: string; updated_at: string }>(`
+    SELECT cn.note_id, c.id as concept_id, c.name, c.definition, c.intuition, c.pitfalls, c.mastery, c.created_at, c.updated_at
+    FROM concept_notes cn
+    INNER JOIN concepts c ON c.id = cn.concept_id
+  `)
+
+  // Group concepts by note_id
+  const conceptsByNoteId = new Map<string, Concept[]>()
+  for (const link of conceptLinks) {
+    const concepts = conceptsByNoteId.get(link.note_id) || []
+    concepts.push({
+      id: link.concept_id,
+      name: link.name,
+      definition: link.definition,
+      intuition: link.intuition || undefined,
+      pitfalls: link.pitfalls || undefined,
+      mastery: link.mastery as Concept['mastery'],
+      created_at: link.created_at,
+      updated_at: link.updated_at,
+    })
+    conceptsByNoteId.set(link.note_id, concepts)
+  }
+
+  return rows.map(row => rowToNote(row, conceptsByNoteId.get(row.id)))
 }
 
 export function getNoteById(id: string): AtomicNote | null {
@@ -228,14 +253,38 @@ export function searchNotes(searchTerm: string): AtomicNote[] {
   return rows.map(row => rowToNote(row))
 }
 
-export function getNoteCounts(): { total: number; lowConfidence: number; needsReview: number } {
+export function getNotesByType(noteType: NoteType): AtomicNote[] {
+  const rows = query<NoteRow>(`
+    SELECT * FROM atomic_notes
+    WHERE note_type = ?
+    ORDER BY created_at DESC
+  `, [noteType])
+  return rows.map(row => rowToNote(row))
+}
+
+export function getNoteCounts(): { total: number; byType: Record<NoteType, number> } {
   const total = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM atomic_notes')?.count || 0
-  const lowConfidence = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM atomic_notes WHERE confidence <= 2')?.count || 0
-  const needsReview = queryOne<{ count: number }>(`
-    SELECT COUNT(*) as count FROM atomic_notes 
-    WHERE last_reviewed IS NULL 
-       OR datetime(last_reviewed) < datetime('now', '-7 days')
-  `)?.count || 0
-  
-  return { total, lowConfidence, needsReview }
+
+  const typeCountRows = query<{ note_type: string; count: number }>(`
+    SELECT note_type, COUNT(*) as count FROM atomic_notes GROUP BY note_type
+  `)
+
+  const byType: Record<NoteType, number> = {
+    definition: 0,
+    idea: 0,
+    connection: 0,
+    question: 0,
+    insight: 0,
+    process: 0,
+    example: 0,
+    other: 0,
+  }
+
+  for (const row of typeCountRows) {
+    if (row.note_type in byType) {
+      byType[row.note_type as NoteType] = row.count
+    }
+  }
+
+  return { total, byType }
 }

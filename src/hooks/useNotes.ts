@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import * as noteQueries from '@/db/queries/notes'
-import type { AtomicNote, CreateAtomicNote } from '@/types'
+import type { AtomicNote, CreateAtomicNote, NoteType } from '@/types'
 
 export function useNotes() {
   const { isDbReady, refreshTrigger } = useAppStore()
@@ -127,22 +127,12 @@ export function useNotes() {
     }
   }, [isDbReady])
 
-  const getLowConfidenceNotes = useCallback((): AtomicNote[] => {
+  const getNotesByType = useCallback((noteType: NoteType): AtomicNote[] => {
     if (!isDbReady) return []
     try {
-      return noteQueries.getNotesByConfidence(1, 2)
+      return noteQueries.getNotesByType(noteType)
     } catch (err) {
-      console.error('Error getting low confidence notes:', err)
-      return []
-    }
-  }, [isDbReady])
-
-  const getNotesNeedingReview = useCallback((): AtomicNote[] => {
-    if (!isDbReady) return []
-    try {
-      return noteQueries.getNotesNeedingReview()
-    } catch (err) {
-      console.error('Error getting notes needing review:', err)
+      console.error('Error getting notes by type:', err)
       return []
     }
   }, [isDbReady])
@@ -170,8 +160,7 @@ export function useNotes() {
     unlinkFromConcept,
     searchNotes,
     getRecentNotes,
-    getLowConfidenceNotes,
-    getNotesNeedingReview,
+    getNotesByType,
     getCounts,
     refresh: fetchNotes,
   }

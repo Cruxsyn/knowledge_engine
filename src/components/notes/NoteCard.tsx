@@ -6,7 +6,6 @@ import { formatDate, truncate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { AtomicNote } from '@/types'
 import { NOTE_TYPE_CONFIGS, getNoteDisplayText } from '@/types'
-import { Star } from 'lucide-react'
 
 interface NoteCardProps {
   note: AtomicNote
@@ -19,26 +18,8 @@ export function NoteCard({ note }: NoteCardProps) {
   const typeConfig = NOTE_TYPE_CONFIGS.find(t => t.value === note.note_type)
   const displayText = getNoteDisplayText(note)
 
-  const renderConfidence = () => {
-    return (
-      <div className="flex items-center gap-0.5">
-        {[1, 2, 3, 4, 5].map((level) => (
-          <Star
-            key={level}
-            className={cn(
-              "h-3 w-3",
-              level <= note.confidence 
-                ? "fill-icon-gold text-icon-gold" 
-                : "text-ash-stone"
-            )}
-          />
-        ))}
-      </div>
-    )
-  }
-
   return (
-    <Card 
+    <Card
       className={cn(
         "cursor-pointer transition-all hover:border-ash-stone",
         isSelected && "border-icon-gold/50 bg-ash-stone/30"
@@ -46,17 +27,12 @@ export function NoteCard({ note }: NoteCardProps) {
       onClick={() => setSelectedNote(isSelected ? null : note)}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className="text-xs shrink-0 capitalize">
-                {typeConfig?.label || note.note_type}
-              </Badge>
-            </div>
-            <CardTitle className="text-base line-clamp-2">{note.title}</CardTitle>
-          </div>
-          {renderConfidence()}
+        <div className="flex items-center gap-2 mb-1">
+          <Badge variant="outline" className="text-xs shrink-0 capitalize">
+            {typeConfig?.label || note.note_type}
+          </Badge>
         </div>
+        <CardTitle className="text-base line-clamp-2">{note.title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {displayText.secondary && (
@@ -69,15 +45,8 @@ export function NoteCard({ note }: NoteCardProps) {
           <FormattedText inline>{truncate(displayText.primary, 150)}</FormattedText>
         </div>
 
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-warm-gray">
-            {formatDate(note.created_at)}
-          </span>
-          {note.last_reviewed && (
-            <Badge variant="outline" className="text-xs">
-              Reviewed {formatDate(note.last_reviewed)}
-            </Badge>
-          )}
+        <div className="text-xs text-warm-gray">
+          {formatDate(note.created_at)}
         </div>
 
         {note.concepts && note.concepts.length > 0 && (

@@ -5,6 +5,7 @@ import { useDatabase } from '@/hooks/useDatabase'
 import { useAppStore } from '@/stores/appStore'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { QuickCapture } from '@/components/inbox/QuickCapture'
+import { ShareDialog } from '@/components/share/ShareDialog'
 import { Loader2 } from 'lucide-react'
 
 export function MainLayout() {
@@ -82,6 +83,7 @@ export function MainLayout() {
       {/* Global modals */}
       <GlobalSearch />
       <QuickCapture />
+      <ShareDialog />
     </div>
   )
 }

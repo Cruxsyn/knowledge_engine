@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { FormattedText } from '@/components/ui/formatted-text'
 import { useAppStore } from '@/stores/appStore'
 import { truncate } from '@/lib/utils'
@@ -15,7 +14,7 @@ export function ConceptCard({ concept }: ConceptCardProps) {
   const isSelected = selectedConcept?.id === concept.id
 
   return (
-    <Card 
+    <Card
       className={cn(
         "cursor-pointer transition-all hover:border-ash-stone",
         isSelected && "border-icon-gold/50 bg-ash-stone/30"
@@ -23,10 +22,7 @@ export function ConceptCard({ concept }: ConceptCardProps) {
       onClick={() => setSelectedConcept(isSelected ? null : concept)}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{concept.name}</CardTitle>
-          <Badge variant={concept.mastery as any}>{concept.mastery}</Badge>
-        </div>
+        <CardTitle className="text-base">{concept.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="text-sm text-warm-gray line-clamp-3">

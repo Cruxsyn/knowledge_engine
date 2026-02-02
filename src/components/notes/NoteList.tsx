@@ -1,22 +1,19 @@
 import { useNotes } from '@/hooks/useNotes'
 import { NoteCard } from './NoteCard'
 import { Loader2, FileText } from 'lucide-react'
+import type { NoteType } from '@/types'
 
 interface NoteListProps {
-  viewMode: 'all' | 'recent' | 'low-confidence' | 'needs-review'
+  viewMode: 'all' | NoteType
 }
 
 export function NoteList({ viewMode }: NoteListProps) {
-  const { notes, loading, error, getRecentNotes, getLowConfidenceNotes, getNotesNeedingReview } = useNotes()
+  const { notes, loading, error, getNotesByType } = useNotes()
 
   let displayNotes = notes
-  
-  if (viewMode === 'recent') {
-    displayNotes = getRecentNotes(20)
-  } else if (viewMode === 'low-confidence') {
-    displayNotes = getLowConfidenceNotes()
-  } else if (viewMode === 'needs-review') {
-    displayNotes = getNotesNeedingReview()
+
+  if (viewMode !== 'all') {
+    displayNotes = getNotesByType(viewMode)
   }
 
   if (loading) {
@@ -41,10 +38,10 @@ export function NoteList({ viewMode }: NoteListProps) {
       <div className="text-center py-12">
         <FileText className="h-12 w-12 mx-auto text-warm-gray/50 mb-4" />
         <h3 className="text-lg font-medium text-parchment mb-2">
-          {viewMode === 'all' ? 'No notes yet' : `No ${viewMode.replace('-', ' ')} notes`}
+          {viewMode === 'all' ? 'No notes yet' : `No ${viewMode} notes`}
         </h3>
         <p className="text-warm-gray">
-          {viewMode === 'all' 
+          {viewMode === 'all'
             ? 'Create your first atomic note by distilling a capture'
             : 'Keep building your knowledge base'}
         </p>

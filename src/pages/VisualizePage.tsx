@@ -15,6 +15,8 @@ import {
   Network
 } from 'lucide-react'
 import { FormattedText } from '@/components/ui/formatted-text'
+import { BranchTerminal } from '@/components/visualize/BranchTerminal'
+import { BranchPreview } from '@/components/visualize/BranchPreview'
 import type { AtomicNote, Concept } from '@/types'
 import { getNoteDisplayText } from '@/types'
 
@@ -59,7 +61,11 @@ export function VisualizePage() {
   const [selectedNode, setSelectedNode] = useState<VisNode | null>(null)
   const [showNotes, setShowNotes] = useState(true)
   const [showConcepts, setShowConcepts] = useState(true)
-  
+  const [showBranchEditor, setShowBranchEditor] = useState(false)
+  const [branchParent, setBranchParent] = useState<VisNode | null>(null)
+  const [draftNode, setDraftNode] = useState<VisNode | null>(null)
+  const [preBranchView, setPreBranchView] = useState<{ zoom: number; offset: { x: number; y: number } } | null>(null)
+
   const { notes } = useNotes()
   const { concepts, getGraphData } = useConcepts()
   const { setSelectedNote, setSelectedConcept } = useAppStore()
@@ -67,6 +73,9 @@ export function VisualizePage() {
   const animationRef = useRef<number | undefined>(undefined)
   const nodesRef = useRef<VisNode[]>([])
   const edgesRef = useRef<VisEdge[]>([])
+  const draftNodeRef = useRef<VisNode | null>(null)
+  const branchParentRef = useRef<VisNode | null>(null)
+  const showBranchEditorRef = useRef(false)
 
   // Generate visualization nodes spread across the canvas
   const generateNodes = useMemo(() => {
@@ -174,6 +183,110 @@ export function VisualizePage() {
     nodesRef.current = generateNodes
     edgesRef.current = generateEdges
   }, [generateNodes, generateEdges])
+
+  // Keep refs in sync with state for canvas drawing
+  useEffect(() => {
+    draftNodeRef.current = draftNode
+    branchParentRef.current = branchParent
+    showBranchEditorRef.current = showBranchEditor
+  }, [draftNode, branchParent, showBranchEditor])
+
+  // Branching handlers
+  const startBranching = (parent: VisNode) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    // Save current view for restoration later
+    setPreBranchView({ zoom, offset })
+
+    // Calculate position for new draft node (to the right of parent)
+    const angle = 0 // 0 degrees = right side
+    const distance = 100
+    const newX = parent.x + Math.cos(angle) * distance
+    const newY = parent.y + Math.sin(angle) * distance
+
+    const draft: VisNode = {
+      id: 'draft-node',
+      type: 'note',
+      label: 'New Note',
+      x: newX,
+      y: newY,
+      vx: 0,
+      vy: 0,
+      color: NODE_COLORS.note,
+      size: 8,
+      data: {} as AtomicNote,
+    }
+
+    // Auto-zoom and pan to focus on the parent and draft node
+    // Center point between parent and draft
+    const centerX = (parent.x + newX) / 2
+    const centerY = (parent.y + newY) / 2
+
+    // Calculate offset to center this point (accounting for split view - graph is on left half)
+    const canvasCenter = canvas.width / 2
+    const canvasMiddleY = canvas.height / 2
+
+    // Zoom in to 1.5x for better focus
+    const newZoom = 1.8
+    setZoom(newZoom)
+
+    // Offset to bring the center point to the visible area
+    setOffset({
+      x: canvasCenter - centerX,
+      y: canvasMiddleY - centerY
+    })
+
+    setBranchParent(parent)
+    setDraftNode(draft)
+    setShowBranchEditor(true)
+  }
+
+  const handleBranchSave = () => {
+    // Restore previous view
+    if (preBranchView) {
+      setZoom(preBranchView.zoom)
+      setOffset(preBranchView.offset)
+      setPreBranchView(null)
+    }
+    setDraftNode(null)
+    setBranchParent(null)
+    setShowBranchEditor(false)
+  }
+
+  const cancelBranching = () => {
+    // Restore previous view
+    if (preBranchView) {
+      setZoom(preBranchView.zoom)
+      setOffset(preBranchView.offset)
+      setPreBranchView(null)
+    }
+    setDraftNode(null)
+    setBranchParent(null)
+    setShowBranchEditor(false)
+  }
+
+  // Keyboard handler for branch creation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Enter to start branching when hovering a node
+      if (e.key === 'Enter' && hoveredNode && !showBranchEditor) {
+        const target = e.target as HTMLElement
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          e.preventDefault()
+          startBranching(hoveredNode)
+        }
+      }
+
+      // Escape to cancel branching
+      if (e.key === 'Escape' && showBranchEditor) {
+        cancelBranching()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [hoveredNode, showBranchEditor])
 
   // Canvas rendering and simulation
   useEffect(() => {
@@ -323,6 +436,97 @@ export function VisualizePage() {
         ctx.textAlign = 'center'
         const label = node.label.length > 20 ? node.label.slice(0, 20) + '...' : node.label
         ctx.fillText(label, node.x, node.y + size + 14)
+      }
+
+      // Draw branch indicator when hovering a node (and not in branch editor mode)
+      if (hoveredNode && !showBranchEditorRef.current) {
+        const node = nodes.find(n => n.id === hoveredNode.id)
+        if (node) {
+          // Calculate position for branch indicator (45 degrees, 50px away)
+          const indicatorDistance = 50
+          const angle = Math.PI / 4 // 45 degrees
+          const indicatorX = node.x + Math.cos(angle) * indicatorDistance
+          const indicatorY = node.y - Math.sin(angle) * indicatorDistance
+
+          // Draw dashed line from node to indicator
+          ctx.setLineDash([4, 4])
+          ctx.strokeStyle = '#A0937D'
+          ctx.lineWidth = 1.5
+          ctx.globalAlpha = 0.6
+          ctx.beginPath()
+          ctx.moveTo(node.x, node.y)
+          ctx.lineTo(indicatorX, indicatorY)
+          ctx.stroke()
+          ctx.setLineDash([])
+
+          // Draw "+" indicator circle
+          ctx.globalAlpha = 1
+          ctx.beginPath()
+          ctx.arc(indicatorX, indicatorY, 12, 0, Math.PI * 2)
+          ctx.fillStyle = '#1A1D23'
+          ctx.fill()
+          ctx.strokeStyle = '#A0937D'
+          ctx.lineWidth = 2
+          ctx.stroke()
+
+          // Draw "+" symbol
+          ctx.fillStyle = '#A0937D'
+          ctx.font = 'bold 14px Inter, system-ui, sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('+', indicatorX, indicatorY)
+
+          // Draw hint text
+          ctx.globalAlpha = 0.8
+          ctx.fillStyle = '#E7E0D4'
+          ctx.font = '9px Inter, system-ui, sans-serif'
+          ctx.textBaseline = 'alphabetic'
+          ctx.fillText('Enter to branch', indicatorX, indicatorY + 22)
+          ctx.globalAlpha = 1
+        }
+      }
+
+      // Draw draft node when branching
+      const draft = draftNodeRef.current
+      const parent = branchParentRef.current
+      if (draft && parent) {
+        const parentNode = nodes.find(n => n.id === parent.id)
+        if (parentNode) {
+          // Draw dashed connection to parent
+          ctx.setLineDash([4, 4])
+          ctx.strokeStyle = NODE_COLORS.note
+          ctx.lineWidth = 2
+          ctx.globalAlpha = 0.6
+          ctx.beginPath()
+          ctx.moveTo(parentNode.x, parentNode.y)
+          ctx.lineTo(draft.x, draft.y)
+          ctx.stroke()
+          ctx.setLineDash([])
+          ctx.globalAlpha = 1
+
+          // Draw draft node with dashed border
+          const size = draft.size * 1.2
+          ctx.beginPath()
+          ctx.arc(draft.x, draft.y, size, 0, Math.PI * 2)
+          ctx.fillStyle = draft.color
+          ctx.globalAlpha = 0.7
+          ctx.fill()
+          ctx.globalAlpha = 1
+
+          // Dashed border to indicate draft state
+          ctx.setLineDash([3, 3])
+          ctx.strokeStyle = '#E7E0D4'
+          ctx.lineWidth = 2
+          ctx.stroke()
+          ctx.setLineDash([])
+
+          // Label
+          ctx.fillStyle = '#E7E0D4'
+          ctx.font = 'italic 10px Inter, system-ui, sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'alphabetic'
+          ctx.fillText(draft.label, draft.x, draft.y + size + 14)
+        }
       }
 
       ctx.restore()
@@ -494,69 +698,105 @@ export function VisualizePage() {
         </div>
       </div>
 
-      {/* Canvas area */}
-      <div className="flex-1 relative">
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full"
-          style={{ background: '#0D1117' }}
-        />
+      {/* Main content area - split view when branching */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Canvas area */}
+        <div className={cn("relative", showBranchEditor ? "w-1/2" : "w-full")}>
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full"
+            style={{ background: '#0D1117' }}
+          />
 
-        {/* Help text */}
-        <div className="absolute bottom-4 left-4">
-          <Card className="p-3 bg-charcoal-slate/90 border-ash-stone/50 backdrop-blur-sm">
-            <p className="text-xs text-warm-gray">
-              Scroll to zoom • Drag to pan • Click nodes to select
-            </p>
-          </Card>
+          {/* Help text - hide when branching */}
+          {!showBranchEditor && (
+            <div className="absolute bottom-4 left-4">
+              <Card className="p-3 bg-charcoal-slate/90 border-ash-stone/50 backdrop-blur-sm">
+                <p className="text-xs text-warm-gray">
+                  Scroll to zoom • Drag to pan • Click to select • <span className="text-icon-gold">Hover + Enter to branch</span>
+                </p>
+              </Card>
+            </div>
+          )}
+
+          {/* Selected node info - hide when branching */}
+          {selectedNode && !showBranchEditor && (
+            <div className="absolute top-4 right-4 w-72">
+              <Card className="p-4 bg-charcoal-slate/95 border-ash-stone/50 backdrop-blur-sm">
+                <div className="flex items-start justify-between mb-2">
+                  <Badge
+                    variant="outline"
+                    style={{ borderColor: selectedNode.color, color: selectedNode.color }}
+                  >
+                    {selectedNode.type}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setSelectedNode(null)}
+                  >
+                    ×
+                  </Button>
+                </div>
+                <h3 className="text-parchment font-medium mb-2">{selectedNode.label}</h3>
+
+                {selectedNode.type === 'note' && (
+                  <div className="text-sm text-warm-gray line-clamp-3">
+                    <FormattedText inline>{getNoteDisplayText(selectedNode.data as AtomicNote).primary}</FormattedText>
+                  </div>
+                )}
+                {selectedNode.type === 'concept' && (
+                  <div className="text-sm text-warm-gray line-clamp-3">
+                    <FormattedText inline>{(selectedNode.data as Concept).definition}</FormattedText>
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* Branch Preview - shows on left side when branching */}
+          {showBranchEditor && branchParent && (
+            <div className="absolute top-4 left-4 z-10">
+              <BranchPreview
+                parentNode={{
+                  id: branchParent.id,
+                  type: branchParent.type,
+                  label: branchParent.label,
+                  data: branchParent.data,
+                }}
+                draftLabel={draftNode?.label || 'New Note'}
+              />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {totalItems === 0 && !showBranchEditor && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <Network className="h-12 w-12 text-warm-gray mx-auto mb-4" />
+                <h3 className="text-parchment font-medium mb-2">No data to visualize</h3>
+                <p className="text-sm text-warm-gray">
+                  Add notes and concepts to see your knowledge network
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Selected node info */}
-        {selectedNode && (
-          <div className="absolute top-4 right-4 w-72">
-            <Card className="p-4 bg-charcoal-slate/95 border-ash-stone/50 backdrop-blur-sm">
-              <div className="flex items-start justify-between mb-2">
-                <Badge 
-                  variant="outline" 
-                  style={{ borderColor: selectedNode.color, color: selectedNode.color }}
-                >
-                  {selectedNode.type}
-                </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 w-6 p-0"
-                  onClick={() => setSelectedNode(null)}
-                >
-                  ×
-                </Button>
-              </div>
-              <h3 className="text-parchment font-medium mb-2">{selectedNode.label}</h3>
-              
-              {selectedNode.type === 'note' && (
-                <div className="text-sm text-warm-gray line-clamp-3">
-                  <FormattedText inline>{getNoteDisplayText(selectedNode.data as AtomicNote).primary}</FormattedText>
-                </div>
-              )}
-              {selectedNode.type === 'concept' && (
-                <div className="text-sm text-warm-gray line-clamp-3">
-                  <FormattedText inline>{(selectedNode.data as Concept).definition}</FormattedText>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {totalItems === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Network className="h-12 w-12 text-warm-gray mx-auto mb-4" />
-              <h3 className="text-parchment font-medium mb-2">No data to visualize</h3>
-              <p className="text-sm text-warm-gray">
-                Add notes and concepts to see your knowledge network
-              </p>
-            </div>
+        {/* Branch Terminal - right side when branching */}
+        {showBranchEditor && branchParent && (
+          <div className="w-1/2">
+            <BranchTerminal
+              parentNode={{
+                id: branchParent.id,
+                type: branchParent.type,
+                label: branchParent.label,
+                data: branchParent.data,
+              }}
+              onSave={handleBranchSave}
+              onCancel={cancelBranching}
+            />
           </div>
         )}
       </div>
