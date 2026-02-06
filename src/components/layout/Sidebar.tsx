@@ -7,7 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Terminal,
-  Share2
+  Share2,
+  Calculator
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,10 +16,14 @@ import { useAppStore } from '@/stores/appStore'
 import { useShareStore } from '@/stores/shareStore'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
-const navItems = [
-  { to: '/terminal', icon: Terminal, label: 'Terminal', shortcut: 'T' },
-  { to: '/', icon: FileText, label: 'Atomic Notes', shortcut: 'N' },
-  { to: '/concepts', icon: Lightbulb, label: 'Concepts', shortcut: 'C' },
+const learnItems = [
+  { to: '/', icon: FileText, label: 'Atomic Notes', shortcut: 'Alt+N' },
+  { to: '/concepts', icon: Lightbulb, label: 'Concepts', shortcut: 'Alt+C' },
+]
+
+const toolItems = [
+  { to: '/terminal', icon: Terminal, label: 'Terminal', shortcut: 'Alt+T' },
+  { to: '/math-viz', icon: Calculator, label: 'Math Viz', shortcut: 'Alt+M' },
 ]
 
 export function Sidebar() {
@@ -50,12 +55,12 @@ export function Sidebar() {
           </Button>
         </div>
 
-        {/* Quick Actions */}
-        <div className="p-3 space-y-2">
+        {/* Search */}
+        <div className="p-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className={cn("w-full", !sidebarOpen && "justify-center px-0")}
                 onClick={() => setSearchOpen(true)}
               >
@@ -72,31 +77,60 @@ export function Sidebar() {
               </TooltipContent>
             )}
           </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink to="/visualize">
-                {({ isActive }) => (
-                  <Button 
-                    variant={isActive ? "gold" : "outline"}
-                    className={cn("w-full", !sidebarOpen && "justify-center px-0")}
-                  >
-                    {sidebarOpen ? <span>Visualize</span> : <span className="text-xs">Vis</span>}
-                  </Button>
-                )}
-              </NavLink>
-            </TooltipTrigger>
-            {!sidebarOpen && (
-              <TooltipContent side="right">
-                Visualize Data
-              </TooltipContent>
-            )}
-          </Tooltip>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 flex flex-col justify-center p-3 pb-30 space-y-4">
-          {navItems.map((item) => (
+        {/* Navigation - sectioned */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {/* LEARN section */}
+          {sidebarOpen && (
+            <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-widest text-warm-gray/50 font-medium">
+              Learn
+            </div>
+          )}
+          {learnItems.map((item) => (
+            <Tooltip key={item.to}>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    cn(
+                      "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                      "hover:bg-ash-stone/50 hover:text-parchment",
+                      isActive
+                        ? "bg-ash-stone/60 text-parchment border-l-2 border-icon-gold"
+                        : "text-warm-gray",
+                      !sidebarOpen && "text-center px-0"
+                    )
+                  }
+                >
+                  <span className="inline-flex items-center gap-3 w-full">
+                    <item.icon className="h-5 w-5" />
+                    {sidebarOpen && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        <span className="text-[10px] text-warm-gray/40">{item.shortcut}</span>
+                      </>
+                    )}
+                  </span>
+                </NavLink>
+              </TooltipTrigger>
+              {!sidebarOpen && (
+                <TooltipContent side="right">
+                  {item.label} ({item.shortcut})
+                </TooltipContent>
+              )}
+            </Tooltip>
+          ))}
+
+          {/* TOOLS section */}
+          {sidebarOpen && (
+            <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-widest text-warm-gray/50 font-medium">
+              Tools
+            </div>
+          )}
+          {!sidebarOpen && <div className="h-2" />}
+          {toolItems.map((item) => (
             <Tooltip key={item.to}>
               <TooltipTrigger asChild>
                 <NavLink
@@ -105,26 +139,60 @@ export function Sidebar() {
                     cn(
                       "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
                       "hover:bg-ash-stone/50 hover:text-parchment",
-                      isActive 
-                        ? "bg-ash-stone text-parchment" 
+                      isActive
+                        ? "bg-ash-stone/60 text-parchment border-l-2 border-icon-gold"
                         : "text-warm-gray",
                       !sidebarOpen && "text-center px-0"
                     )
                   }
                 >
-                  <span className="inline-flex items-center gap-3">
+                  <span className="inline-flex items-center gap-3 w-full">
                     <item.icon className="h-5 w-5" />
-                    {sidebarOpen && <span>{item.label}</span>}
+                    {sidebarOpen && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        <span className="text-[10px] text-warm-gray/40">{item.shortcut}</span>
+                      </>
+                    )}
                   </span>
                 </NavLink>
               </TooltipTrigger>
               {!sidebarOpen && (
                 <TooltipContent side="right">
-                  {item.label}
+                  {item.label} ({item.shortcut})
                 </TooltipContent>
               )}
             </Tooltip>
           ))}
+
+          {/* Visualize link */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/visualize"
+                className={({ isActive }) =>
+                  cn(
+                    "block px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "hover:bg-ash-stone/50 hover:text-parchment",
+                    isActive
+                      ? "bg-ash-stone/60 text-parchment border-l-2 border-icon-gold"
+                      : "text-warm-gray",
+                    !sidebarOpen && "text-center px-0"
+                  )
+                }
+              >
+                <span className="inline-flex items-center gap-3 w-full">
+                  <Search className="h-5 w-5" />
+                  {sidebarOpen && <span>Visualize</span>}
+                </span>
+              </NavLink>
+            </TooltipTrigger>
+            {!sidebarOpen && (
+              <TooltipContent side="right">
+                Visualize Data
+              </TooltipContent>
+            )}
+          </Tooltip>
         </nav>
 
         {/* Bottom section */}

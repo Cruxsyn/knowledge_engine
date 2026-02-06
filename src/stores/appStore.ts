@@ -37,6 +37,16 @@ interface AppState {
   selectedConcept: Concept | null
   setSelectedConcept: (concept: Concept | null) => void
   
+  // Cross-feature prefill
+  prefillContent: string
+  setPrefillContent: (content: string) => void
+  prefillMathInput: string
+  setPrefillMathInput: (input: string) => void
+
+  // Note editor type hint (for keyboard shortcuts)
+  noteEditorTypeHint: string | null
+  setNoteEditorTypeHint: (type: string | null) => void
+
   // Refresh triggers
   refreshTrigger: number
   triggerRefresh: () => void
@@ -78,6 +88,16 @@ export const useAppStore = create<AppState>((set) => ({
   selectedConcept: null,
   setSelectedConcept: (concept) => set({ selectedConcept: concept }),
   
+  // Cross-feature prefill
+  prefillContent: '',
+  setPrefillContent: (content) => set({ prefillContent: content }),
+  prefillMathInput: '',
+  setPrefillMathInput: (input) => set({ prefillMathInput: input }),
+
+  // Note editor type hint
+  noteEditorTypeHint: null,
+  setNoteEditorTypeHint: (type) => set({ noteEditorTypeHint: type }),
+
   // Refresh triggers
   refreshTrigger: 0,
   triggerRefresh: () => set((state) => ({ refreshTrigger: state.refreshTrigger + 1 })),

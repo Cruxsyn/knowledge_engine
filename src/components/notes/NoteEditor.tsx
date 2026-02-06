@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { X, Star, Save } from 'lucide-react'
 import type { AtomicNote, NoteType, NoteContent } from '@/types'
 import { NOTE_TYPE_CONFIGS } from '@/types'
+import { getSortedTemplates, trackNoteCreation, getLastUsedType, type NoteTemplate } from '@/lib/noteTemplates'
 
 interface NoteEditorProps {
   note?: AtomicNote
@@ -33,26 +34,35 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const { createNote, updateNote } = useNotes()
   const { concepts } = useConcepts()
   
+  const initialType = note?.note_type || getLastUsedType() || 'definition'
   const [title, setTitle] = useState(note?.title || '')
-  const [noteType, setNoteType] = useState<NoteType>(note?.note_type || 'definition')
+  const [noteType, setNoteType] = useState<NoteType>(initialType)
   const [content, setContent] = useState<Record<string, string>>(
-    (note?.content as Record<string, string>) || getDefaultContent('definition') as Record<string, string>
+    (note?.content as Record<string, string>) || getDefaultContent(initialType) as Record<string, string>
   )
   const [confidence, setConfidence] = useState(note?.confidence || 3)
   const [selectedConcepts, setSelectedConcepts] = useState<string[]>(
     note?.concepts?.map(c => c.id) || []
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
 
   const isEditing = !!note
   const typeConfig = NOTE_TYPE_CONFIGS.find(c => c.value === noteType)
+  const templates = getSortedTemplates(noteType)
 
   // Reset content when type changes (only for new notes)
   useEffect(() => {
     if (!isEditing) {
       setContent(getDefaultContent(noteType) as Record<string, string>)
+      setActiveTemplate(null)
     }
   }, [noteType, isEditing])
+
+  const applyTemplate = (template: NoteTemplate) => {
+    setContent(template.fields as Record<string, string>)
+    setActiveTemplate(template.id)
+  }
 
   const updateContentField = (fieldName: string, value: string) => {
     setContent(prev => ({ ...prev, [fieldName]: value }))
@@ -87,6 +97,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
         if (newNote) {
           setSelectedNote(newNote)
         }
+        trackNoteCreation(noteType, activeTemplate || undefined)
       }
       triggerRefresh()
       onClose()
@@ -156,6 +167,33 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Template chips */}
+        {!isEditing && templates.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs text-warm-gray">Quick Templates</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyTemplate(t)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-xs transition-colors border',
+                    activeTemplate === t.id
+                      ? 'bg-icon-gold/20 text-icon-gold border-icon-gold/50'
+                      : 'bg-ash-stone/30 text-warm-gray border-ash-stone/50 hover:bg-ash-stone/50 hover:text-parchment'
+                  )}
+                >
+                  {t.name}
+                  {t.category && (
+                    <span className="ml-1 text-[9px] opacity-60">{t.category}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Fields based on Note Type */}
         {typeConfig && (

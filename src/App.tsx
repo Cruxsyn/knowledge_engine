@@ -6,6 +6,7 @@ import { NotesPage } from '@/pages/NotesPage'
 import { ConceptsPage } from '@/pages/ConceptsPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { VisualizePage } from '@/pages/VisualizePage'
+import { MathVisualizationPage } from '@/pages/MathVisualizationPage'
 import { SharedViewPage } from '@/pages/SharedViewPage'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/concepts" element={<ConceptsPage />} />
           <Route path="/visualize" element={<VisualizePage />} />
+          <Route path="/math-viz" element={<MathVisualizationPage />} />
           <Route path="/export" element={<ExportPage />} />
         </Route>
 

@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { useDatabase } from '@/hooks/useDatabase'
@@ -11,6 +11,8 @@ import { Loader2 } from 'lucide-react'
 export function MainLayout() {
   const { isReady, error } = useDatabase()
   const { setQuickCaptureOpen, setSearchOpen } = useAppStore()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -19,16 +21,28 @@ export function MainLayout() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
         setSearchOpen(true)
+        return
       }
-      
+
       // Ctrl+Shift+N or Cmd+Shift+N for quick capture
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
         e.preventDefault()
         setQuickCaptureOpen(true)
+        return
       }
-      
+
+      // Alt+key navigation shortcuts (work even in input fields)
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'n': e.preventDefault(); navigate('/'); return
+          case 'c': e.preventDefault(); navigate('/concepts'); return
+          case 't': e.preventDefault(); navigate('/terminal'); return
+          case 'm': e.preventDefault(); navigate('/math-viz'); return
+        }
+      }
+
       // N for new note (when not in an input)
-      if (e.key === 'n' && !isInputElement(e.target)) {
+      if (e.key === 'n' && !e.altKey && !e.ctrlKey && !e.metaKey && !isInputElement(e.target)) {
         e.preventDefault()
         setQuickCaptureOpen(true)
       }
@@ -42,7 +56,7 @@ export function MainLayout() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [setQuickCaptureOpen, setSearchOpen])
+  }, [setQuickCaptureOpen, setSearchOpen, navigate])
 
   if (error) {
     return (
@@ -77,7 +91,9 @@ export function MainLayout() {
       <Sidebar />
       
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Outlet />
+        <div key={location.pathname} className="animate-page-in h-full flex flex-col">
+          <Outlet />
+        </div>
       </main>
 
       {/* Global modals */}
