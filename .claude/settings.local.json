@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run build:*)",
       "WebFetch(domain:clippable.io)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:properhealth.com)"
     ]
   }
 }
