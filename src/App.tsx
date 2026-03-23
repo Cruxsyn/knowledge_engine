@@ -8,6 +8,7 @@ import { ExportPage } from '@/pages/ExportPage'
 import { VisualizePage } from '@/pages/VisualizePage'
 import { MathVisualizationPage } from '@/pages/MathVisualizationPage'
 import { SharedViewPage } from '@/pages/SharedViewPage'
+import { JapanesePage } from '@/pages/JapanesePage'
 
 function App() {
   return (
@@ -21,6 +22,14 @@ function App() {
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/math-viz" element={<MathVisualizationPage />} />
           <Route path="/export" element={<ExportPage />} />
+          <Route path="/japanese" element={<JapanesePage />} />
+          <Route path="/japanese/review" element={<JapanesePage />} />
+          <Route path="/japanese/explore" element={<JapanesePage />} />
+          <Route path="/japanese/explore/:nodeId" element={<JapanesePage />} />
+          <Route path="/japanese/kanji" element={<JapanesePage />} />
+          <Route path="/japanese/kanji/:kanjiId" element={<JapanesePage />} />
+          <Route path="/japanese/reading" element={<JapanesePage />} />
+          <Route path="/japanese/settings" element={<JapanesePage />} />
         </Route>
 
         {/* Shared content routes (minimal layout, no sidebar) */}

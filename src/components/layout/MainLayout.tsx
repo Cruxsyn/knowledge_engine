@@ -38,6 +38,7 @@ export function MainLayout() {
           case 'c': e.preventDefault(); navigate('/concepts'); return
           case 't': e.preventDefault(); navigate('/terminal'); return
           case 'm': e.preventDefault(); navigate('/math-viz'); return
+          case 'j': e.preventDefault(); navigate('/japanese'); return
         }
       }
 
