@@ -603,3 +603,14 @@ export interface JpDashboardStats {
   totalKnownWords: number
   progress: JpProgress[]
 }
+
+// Tokenized word for reading practice
+export interface JpTokenizedWord {
+  surface: string
+  lemma: string
+  reading?: string
+  meaning?: string
+  pos?: string
+  jlpt?: string
+  mastery: JpMasteryLevel
+}

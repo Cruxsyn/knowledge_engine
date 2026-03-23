@@ -3,6 +3,7 @@ import { loadFromStorage, saveToStorage } from '@/lib/persistence'
 import schema from './schema.sql?raw'
 import learningSchema from './learning-schema.sql?raw'
 import japaneseSchema from './japanese-schema.sql?raw'
+import { seedJapaneseData } from '@/db/seed/japanese-seed'
 
 let SQL: SqlJsStatic | null = null
 let db: Database | null = null
@@ -603,6 +604,17 @@ export async function initDatabase(): Promise<Database> {
     runMigrations(db)
     runLearningMigrations(db)
     runJapaneseMigrations(db)
+    // Seed Japanese data if jp_kanji table is empty
+    try {
+      const kanjiCount = db.exec('SELECT COUNT(*) as count FROM jp_kanji')
+      if (kanjiCount.length === 0 || kanjiCount[0].values[0][0] === 0) {
+        console.log('[Database] Seeding Japanese starter data...')
+        seedJapaneseData(db)
+        console.log('[Database] Japanese starter data seeded')
+      }
+    } catch (err) {
+      console.error('[Database] Japanese seed check error:', err)
+    }
     await persistDatabase()
   } else {
     db = new SQL.Database()
@@ -766,6 +778,7 @@ export async function resetAndSeedDatabase(): Promise<void> {
   seedTestData(db)
   seedLearningData(db)
   runJapaneseMigrations(db)
+  seedJapaneseData(db)
   await persistDatabase()
   console.log('[Database] Reset and reseeded')
 }

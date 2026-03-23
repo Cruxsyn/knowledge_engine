@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   BarChart3,
   Flame,
@@ -10,9 +10,10 @@ import {
   Trophy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { subDays, format, getDay } from 'date-fns'
+import { format, getDay, subDays } from 'date-fns'
+import { useJapanese } from '@/hooks/useJapanese'
 
-// ── Types ────────────────────────────────────────────────────────────────
+// -- Types --
 
 interface JlptLevelProgress {
   level: string
@@ -31,61 +32,17 @@ interface HeatMapDay {
   minutes: number
 }
 
-// ── Mock Data ────────────────────────────────────────────────────────────
-
-const JLPT_PROGRESS: JlptLevelProgress[] = [
-  { level: 'N5', kanji: { known: 72, total: 80 }, vocabulary: { known: 580, total: 670 }, grammar: { known: 110, total: 128 } },
-  { level: 'N4', kanji: { known: 105, total: 170 }, vocabulary: { known: 420, total: 1050 }, grammar: { known: 68, total: 196 } },
-  { level: 'N3', kanji: { known: 85, total: 370 }, vocabulary: { known: 280, total: 1850 }, grammar: { known: 35, total: 312 } },
-  { level: 'N2', kanji: { known: 20, total: 380 }, vocabulary: { known: 65, total: 3800 }, grammar: { known: 8, total: 256 } },
-  { level: 'N1', kanji: { known: 3, total: 1000 }, vocabulary: { known: 10, total: 6000 }, grammar: { known: 0, total: 230 } },
-]
-
-const DIMENSION_SCORES: DimensionScore[] = [
-  { label: 'Vocabulary', value: 3.2 },
-  { label: 'Kanji', value: 2.8 },
-  { label: 'Grammar', value: 2.1 },
-  { label: 'Reading', value: 3.5 },
-  { label: 'Listening', value: 1.4 },
-]
-
-const STATS = {
-  totalWordsKnown: 1355,
-  totalKanjiKnown: 285,
-  totalGrammarPatterns: 221,
-  currentStreak: 14,
-  longestStreak: 42,
-  totalStudyHours: 186,
-  averageAccuracy: 87,
+interface LoadedStats {
+  totalWordsKnown: number
+  totalKanjiKnown: number
+  totalGrammarPatterns: number
+  currentStreak: number
+  longestStreak: number
+  totalStudyHours: number
+  averageAccuracy: number
 }
 
-// ── Heat Map Generation ──────────────────────────────────────────────────
-
-function generateHeatMapData(days: number): HeatMapDay[] {
-  // Use a seeded-like approach for consistent mock data across renders
-  const data: HeatMapDay[] = []
-  for (let i = 0; i < days; i++) {
-    const date = subDays(new Date(), days - 1 - i)
-    const dayOfWeek = getDay(date)
-    // Simulate varying study patterns: weekends more active
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-    const baseChance = isWeekend ? 0.85 : 0.65
-    const seed = (date.getDate() * 7 + date.getMonth() * 31) % 100
-    const studied = seed / 100 < baseChance
-    const minutes = studied ? Math.max(5, (seed * 7) % 75) : 0
-    data.push({ date, minutes })
-  }
-  // Ensure recent days show a streak matching STATS.currentStreak
-  for (let i = 0; i < STATS.currentStreak && i < data.length; i++) {
-    const idx = data.length - 1 - i
-    if (data[idx].minutes === 0) {
-      data[idx] = { ...data[idx], minutes: 15 + ((i * 13) % 50) }
-    }
-  }
-  return data
-}
-
-// ── Sub-Components ───────────────────────────────────────────────────────
+// -- Sub-Components --
 
 function ProgressBar({ value, total, className }: { value: number; total: number; className?: string }) {
   const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0
@@ -122,9 +79,9 @@ function StatCard({ icon: Icon, label, value, sub }: {
   )
 }
 
-// ── JLPT Section ─────────────────────────────────────────────────────────
+// -- JLPT Section --
 
-function JlptProgressSection() {
+function JlptProgressSection({ jlptData }: { jlptData: JlptLevelProgress[] }) {
   return (
     <div className="bg-charcoal-slate/50 border border-ash-stone/30 rounded-lg p-6">
       <h3 className="font-serif text-lg text-parchment mb-4 flex items-center gap-2">
@@ -133,14 +90,14 @@ function JlptProgressSection() {
       </h3>
 
       <div className="space-y-5">
-        {JLPT_PROGRESS.map((level) => (
+        {jlptData.map((level) => (
           <div key={level.level}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-parchment w-8">{level.level}</span>
               <span className="text-xs text-warm-gray">
                 {Math.round(
                   ((level.kanji.known + level.vocabulary.known + level.grammar.known) /
-                    (level.kanji.total + level.vocabulary.total + level.grammar.total)) *
+                    Math.max(1, level.kanji.total + level.vocabulary.total + level.grammar.total)) *
                     100
                 )}% overall
               </span>
@@ -166,7 +123,7 @@ function JlptProgressSection() {
   )
 }
 
-// ── Heat Map ─────────────────────────────────────────────────────────────
+// -- Heat Map --
 
 function getHeatColor(minutes: number): string {
   if (minutes === 0) return 'fill-ash-stone/20'
@@ -176,11 +133,10 @@ function getHeatColor(minutes: number): string {
   return 'fill-icon-gold'
 }
 
-function StudyCalendar() {
-  const heatData = useMemo(() => generateHeatMapData(112), []) // 16 weeks
-
+function StudyCalendar({ heatData, streak }: { heatData: HeatMapDay[]; streak: number }) {
   // Group days into weeks (columns). Each column = 1 week.
   const weeks = useMemo(() => {
+    if (heatData.length === 0) return []
     const result: HeatMapDay[][] = []
     let currentWeek: HeatMapDay[] = []
 
@@ -238,7 +194,7 @@ function StudyCalendar() {
         </h3>
         <div className="flex items-center gap-2">
           <Flame className="h-4 w-4 text-icon-gold" />
-          <span className="text-sm text-parchment font-medium">{STATS.currentStreak} day streak</span>
+          <span className="text-sm text-parchment font-medium">{streak} day streak</span>
         </div>
       </div>
 
@@ -310,7 +266,7 @@ function StudyCalendar() {
   )
 }
 
-// ── Radar Chart ──────────────────────────────────────────────────────────
+// -- Radar Chart --
 
 function RadarChart({ dimensions }: { dimensions: DimensionScore[] }) {
   const size = 240
@@ -423,9 +379,164 @@ function RadarChart({ dimensions }: { dimensions: DimensionScore[] }) {
   )
 }
 
-// ── Main Component ───────────────────────────────────────────────────────
+// -- Main Component --
 
 export function ProgressPanel() {
+  const jp = useJapanese()
+  const [jlptData, setJlptData] = useState<JlptLevelProgress[]>([])
+  const [dimensions, setDimensions] = useState<DimensionScore[]>([
+    { label: 'Vocabulary', value: 0 },
+    { label: 'Kanji', value: 0 },
+    { label: 'Grammar', value: 0 },
+    { label: 'Reading', value: 0 },
+    { label: 'Listening', value: 0 },
+  ])
+  const [stats, setStats] = useState<LoadedStats>({
+    totalWordsKnown: 0,
+    totalKanjiKnown: 0,
+    totalGrammarPatterns: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    totalStudyHours: 0,
+    averageAccuracy: 0,
+  })
+  const [heatData, setHeatData] = useState<HeatMapDay[]>([])
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // Load progress dimensions
+        const progress = await jp.getProgress()
+        if (progress && progress.length > 0) {
+          const dimMap: Record<string, number> = {}
+          for (const p of progress) {
+            dimMap[p.dimension] = p.current_level
+          }
+          setDimensions([
+            { label: 'Vocabulary', value: dimMap['vocabulary'] ?? 0 },
+            { label: 'Kanji', value: dimMap['kanji'] ?? 0 },
+            { label: 'Grammar', value: dimMap['grammar'] ?? 0 },
+            { label: 'Reading', value: dimMap['reading'] ?? 0 },
+            { label: 'Listening', value: dimMap['listening'] ?? 0 },
+          ])
+        }
+
+        // Load dashboard stats
+        const dashStats = await jp.getDashboardStats()
+        if (dashStats) {
+          // Calculate per-dimension known counts for stats
+          let vocabKnown = 0
+          let kanjiKnown = 0
+          let grammarKnown = 0
+          let totalHours = 0
+
+          for (const p of dashStats.progress) {
+            if (p.dimension === 'vocabulary') vocabKnown = p.items_known + p.items_mastered
+            if (p.dimension === 'kanji') kanjiKnown = p.items_known + p.items_mastered
+            if (p.dimension === 'grammar') grammarKnown = p.items_known + p.items_mastered
+          }
+
+          // Load study sessions to compute total hours
+          const sessions = await jp.getStudySessions(365)
+          if (sessions) {
+            totalHours = Math.round(
+              sessions.reduce((sum, s) => sum + s.duration_minutes, 0) / 60
+            )
+          }
+
+          setStats({
+            totalWordsKnown: vocabKnown,
+            totalKanjiKnown: kanjiKnown,
+            totalGrammarPatterns: grammarKnown,
+            currentStreak: dashStats.currentStreak,
+            longestStreak: dashStats.currentStreak, // Use current as fallback
+            totalStudyHours: totalHours,
+            averageAccuracy: Math.round(dashStats.todayAccuracy * 100),
+          })
+
+          // Build JLPT progress data from progress info
+          // N5 items are subset of the total; approximate using ratios
+          const totalKnown = dashStats.progress.reduce(
+            (s, p) => s + p.items_known + p.items_mastered, 0
+          )
+          const totalItems = dashStats.progress.reduce(
+            (s, p) => s + p.items_total, 0
+          )
+          const ratio = totalItems > 0 ? totalKnown / totalItems : 0
+
+          // Approximate JLPT level breakdowns based on typical item counts
+          const jlptTotals: Record<string, { kanji: number; vocab: number; grammar: number }> = {
+            N5: { kanji: 80, vocab: 670, grammar: 128 },
+            N4: { kanji: 170, vocab: 1050, grammar: 196 },
+            N3: { kanji: 370, vocab: 1850, grammar: 312 },
+            N2: { kanji: 380, vocab: 3800, grammar: 256 },
+            N1: { kanji: 1000, vocab: 6000, grammar: 230 },
+          }
+
+          const jlptProgress: JlptLevelProgress[] = ['N5', 'N4', 'N3', 'N2', 'N1'].map((level) => {
+            const totals = jlptTotals[level]
+            // Estimate known items per level based on overall mastery ratio (decreasing for higher levels)
+            const levelMultiplier = level === 'N5' ? 1.0 : level === 'N4' ? 0.7 : level === 'N3' ? 0.4 : level === 'N2' ? 0.15 : 0.03
+            return {
+              level,
+              kanji: {
+                known: Math.min(totals.kanji, Math.round(kanjiKnown * levelMultiplier)),
+                total: totals.kanji,
+              },
+              vocabulary: {
+                known: Math.min(totals.vocab, Math.round(vocabKnown * levelMultiplier)),
+                total: totals.vocab,
+              },
+              grammar: {
+                known: Math.min(totals.grammar, Math.round(grammarKnown * levelMultiplier)),
+                total: totals.grammar,
+              },
+            }
+          })
+          setJlptData(jlptProgress)
+        }
+
+        // Load heat map data from study sessions
+        const heatSessions = await jp.getStudySessions(112)
+        if (heatSessions) {
+          // Build a map of date -> total minutes
+          const dateMinutes = new Map<string, number>()
+          for (const s of heatSessions) {
+            const existing = dateMinutes.get(s.session_date) ?? 0
+            dateMinutes.set(s.session_date, existing + s.duration_minutes)
+          }
+
+          // Create array for last 112 days
+          const today = new Date()
+          const heatMapData: HeatMapDay[] = []
+          for (let i = 111; i >= 0; i--) {
+            const d = new Date(today)
+            d.setDate(d.getDate() - i)
+            const dateStr = d.toISOString().split('T')[0]
+            heatMapData.push({
+              date: d,
+              minutes: dateMinutes.get(dateStr) ?? 0,
+            })
+          }
+          setHeatData(heatMapData)
+        }
+      } catch (err) {
+        console.error('[ProgressPanel] Error loading data:', err)
+      }
+    }
+
+    loadData()
+  }, [jp])
+
+  // Estimate level
+  const estimatedLevel = useMemo(() => {
+    const totalKnown = stats.totalWordsKnown + stats.totalKanjiKnown + stats.totalGrammarPatterns
+    if (totalKnown >= 2000) return { level: 'N3', desc: 'Intermediate' }
+    if (totalKnown >= 800) return { level: 'N4', desc: 'Upper Elementary' }
+    if (totalKnown >= 200) return { level: 'N5', desc: 'Elementary' }
+    return { level: '--', desc: 'Beginner' }
+  }, [stats])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -436,28 +547,28 @@ export function ProgressPanel() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={BookOpen} label="Words Known" value={STATS.totalWordsKnown.toLocaleString()} />
-        <StatCard icon={Languages} label="Kanji Known" value={STATS.totalKanjiKnown} />
-        <StatCard icon={Brain} label="Grammar" value={STATS.totalGrammarPatterns} />
-        <StatCard icon={Flame} label="Current Streak" value={`${STATS.currentStreak} days`} />
-        <StatCard icon={Trophy} label="Longest Streak" value={`${STATS.longestStreak} days`} />
-        <StatCard icon={Clock} label="Total Study" value={`${STATS.totalStudyHours}h`} />
-        <StatCard icon={Target} label="Avg. Accuracy" value={`${STATS.averageAccuracy}%`} />
+        <StatCard icon={BookOpen} label="Words Known" value={stats.totalWordsKnown.toLocaleString()} />
+        <StatCard icon={Languages} label="Kanji Known" value={stats.totalKanjiKnown} />
+        <StatCard icon={Brain} label="Grammar" value={stats.totalGrammarPatterns} />
+        <StatCard icon={Flame} label="Current Streak" value={`${stats.currentStreak} days`} />
+        <StatCard icon={Trophy} label="Longest Streak" value={`${stats.longestStreak} days`} />
+        <StatCard icon={Clock} label="Total Study" value={`${stats.totalStudyHours}h`} />
+        <StatCard icon={Target} label="Avg. Accuracy" value={`${stats.averageAccuracy}%`} />
         <StatCard
           icon={BookOpen}
           label="Est. Level"
-          value="N4"
-          sub="Upper Elementary"
+          value={estimatedLevel.level}
+          sub={estimatedLevel.desc}
         />
       </div>
 
       {/* Study Calendar */}
-      <StudyCalendar />
+      <StudyCalendar heatData={heatData} streak={stats.currentStreak} />
 
       {/* JLPT Progress + Radar side by side on larger screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <JlptProgressSection />
-        <RadarChart dimensions={DIMENSION_SCORES} />
+        <JlptProgressSection jlptData={jlptData} />
+        <RadarChart dimensions={dimensions} />
       </div>
     </div>
   )

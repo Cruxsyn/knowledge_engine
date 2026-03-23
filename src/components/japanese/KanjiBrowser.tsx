@@ -1,67 +1,20 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useJapaneseStore } from '@/stores/japaneseStore'
+import { useJapanese } from '@/hooks/useJapanese'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { Search, Grid3X3, List, GitBranch } from 'lucide-react'
-import type { JpKanji, JpMasteryLevel, JpItemType } from '@/types'
+import { Search, Grid3X3, List, GitBranch, Loader2 } from 'lucide-react'
+import type { JpKanji, JpMasteryLevel, JpRadical } from '@/types'
 
-// ── Mock kanji data (N5 set) ─────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────
 
 interface KanjiEntry {
   kanji: JpKanji
   mastery: JpMasteryLevel
 }
-
-const MOCK_KANJI: KanjiEntry[] = [
-  { kanji: { id: 'k-n5-1', character: '一', meanings: ['one'], on_readings: ['イチ', 'イツ'], kun_readings: ['ひと.つ'], jlpt_level: 5, grade: 1, stroke_count: 1, components: [], mnemonic: 'A single horizontal line - the number one' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-2', character: '二', meanings: ['two'], on_readings: ['ニ'], kun_readings: ['ふた.つ'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'Two horizontal lines stacked' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-3', character: '三', meanings: ['three'], on_readings: ['サン'], kun_readings: ['み.つ'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'Three horizontal lines' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-4', character: '四', meanings: ['four'], on_readings: ['シ'], kun_readings: ['よ.つ', 'よん'], jlpt_level: 5, grade: 1, stroke_count: 5, components: [], mnemonic: 'A window divided into four panes' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-5', character: '五', meanings: ['five'], on_readings: ['ゴ'], kun_readings: ['いつ.つ'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'Five strokes criss-crossing' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-6', character: '六', meanings: ['six'], on_readings: ['ロク'], kun_readings: ['む.つ'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'A hat over two legs' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-7', character: '七', meanings: ['seven'], on_readings: ['シチ'], kun_readings: ['なな.つ'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'An upside-down seven' }, mastery: 'seen' },
-  { kanji: { id: 'k-n5-8', character: '八', meanings: ['eight'], on_readings: ['ハチ'], kun_readings: ['や.つ'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'Two strokes splitting apart like eight' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-9', character: '九', meanings: ['nine'], on_readings: ['キュウ', 'ク'], kun_readings: ['ここの.つ'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'A curling line - almost at ten' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-10', character: '十', meanings: ['ten'], on_readings: ['ジュウ', 'ジッ'], kun_readings: ['とお'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'A cross, like the plus sign for ten' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-11', character: '日', meanings: ['day', 'sun', 'Japan'], on_readings: ['ニチ', 'ジツ'], kun_readings: ['ひ', 'か'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'A sun framed in a window' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-12', character: '月', meanings: ['month', 'moon'], on_readings: ['ゲツ', 'ガツ'], kun_readings: ['つき'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'A crescent moon' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-13', character: '火', meanings: ['fire'], on_readings: ['カ'], kun_readings: ['ひ', 'ほ'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'Sparks flying from a person' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-14', character: '水', meanings: ['water'], on_readings: ['スイ'], kun_readings: ['みず'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'Water cascading down a waterfall' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-15', character: '木', meanings: ['tree', 'wood'], on_readings: ['モク', 'ボク'], kun_readings: ['き', 'こ'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'A tree with branches and roots' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-16', character: '金', meanings: ['gold', 'money', 'metal'], on_readings: ['キン', 'コン'], kun_readings: ['かね', 'かな'], jlpt_level: 5, grade: 1, stroke_count: 8, components: [], mnemonic: 'A king sitting under a roof counting gold' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-17', character: '土', meanings: ['earth', 'soil', 'ground'], on_readings: ['ド', 'ト'], kun_readings: ['つち'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A cross planted in the ground' }, mastery: 'seen' },
-  { kanji: { id: 'k-n5-18', character: '山', meanings: ['mountain', 'hill'], on_readings: ['サン', 'セン'], kun_readings: ['やま'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'Three peaks of a mountain' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-19', character: '川', meanings: ['river', 'stream'], on_readings: ['セン'], kun_readings: ['かわ'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'Three flowing streams of a river' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-20', character: '大', meanings: ['big', 'large', 'great'], on_readings: ['ダイ', 'タイ'], kun_readings: ['おお.きい'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A person with arms spread wide - big!' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-21', character: '小', meanings: ['small', 'little'], on_readings: ['ショウ'], kun_readings: ['ちい.さい', 'こ', 'お'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'Small marks beside a line' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-22', character: '中', meanings: ['middle', 'center', 'inside'], on_readings: ['チュウ'], kun_readings: ['なか'], jlpt_level: 5, grade: 1, stroke_count: 4, components: [], mnemonic: 'A line through the center of a box' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-23', character: '人', meanings: ['person', 'people'], on_readings: ['ジン', 'ニン'], kun_readings: ['ひと'], jlpt_level: 5, grade: 1, stroke_count: 2, components: [], mnemonic: 'Two strokes leaning on each other like a person' }, mastery: 'mastered' },
-  { kanji: { id: 'k-n5-24', character: '上', meanings: ['up', 'above', 'top'], on_readings: ['ジョウ', 'ショウ'], kun_readings: ['うえ', 'あ.がる', 'のぼ.る'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A vertical line rising above the ground' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-25', character: '下', meanings: ['down', 'below', 'under'], on_readings: ['カ', 'ゲ'], kun_readings: ['した', 'さ.がる', 'くだ.る'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A mark below the baseline' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-26', character: '右', meanings: ['right'], on_readings: ['ウ', 'ユウ'], kun_readings: ['みぎ'], jlpt_level: 5, grade: 1, stroke_count: 5, components: [], mnemonic: 'A hand (right side) reaching for food (mouth)' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-27', character: '左', meanings: ['left'], on_readings: ['サ'], kun_readings: ['ひだり'], jlpt_level: 5, grade: 1, stroke_count: 5, components: [], mnemonic: 'A hand on the left doing work' }, mastery: 'learning' },
-  { kanji: { id: 'k-n5-28', character: '男', meanings: ['man', 'male'], on_readings: ['ダン', 'ナン'], kun_readings: ['おとこ'], jlpt_level: 5, grade: 1, stroke_count: 7, components: ['k-n5-17'], mnemonic: 'Strength (force) in the rice field - a man working' }, mastery: 'seen' },
-  { kanji: { id: 'k-n5-29', character: '女', meanings: ['woman', 'female'], on_readings: ['ジョ', 'ニョ'], kun_readings: ['おんな'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A graceful figure with arms crossed' }, mastery: 'known' },
-  { kanji: { id: 'k-n5-30', character: '子', meanings: ['child', 'offspring'], on_readings: ['シ', 'ス'], kun_readings: ['こ'], jlpt_level: 5, grade: 1, stroke_count: 3, components: [], mnemonic: 'A baby with arms outstretched' }, mastery: 'mastered' },
-]
-
-// Component hierarchy for the components view
-const COMPONENT_TREE: { radical: string; meaning: string; kanji: string[] }[] = [
-  { radical: '一', meaning: 'one', kanji: ['一', '二', '三', '上', '下'] },
-  { radical: '日', meaning: 'sun/day', kanji: ['日', '月'] },
-  { radical: '木', meaning: 'tree', kanji: ['木'] },
-  { radical: '水', meaning: 'water', kanji: ['水'] },
-  { radical: '火', meaning: 'fire', kanji: ['火'] },
-  { radical: '土', meaning: 'earth', kanji: ['土', '金'] },
-  { radical: '人', meaning: 'person', kanji: ['人', '大', '女', '男'] },
-  { radical: '口', meaning: 'mouth', kanji: ['四', '中', '右'] },
-  { radical: '山', meaning: 'mountain', kanji: ['山'] },
-  { radical: '川', meaning: 'river', kanji: ['川'] },
-  { radical: '子', meaning: 'child', kanji: ['子'] },
-]
 
 // ── Mastery config ───────────────────────────────────────────────────
 
@@ -91,15 +44,63 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
     setKanjiBrowserView,
   } = useJapaneseStore()
 
+  const jp = useJapanese()
+
+  const [kanjiList, setKanjiList] = useState<JpKanji[]>([])
+  const [radicals, setRadicals] = useState<JpRadical[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedKanjiId, setSelectedKanjiId] = useState<string | null>(null)
 
-  const filteredKanji = useMemo(() => {
-    let result = MOCK_KANJI
+  // Load kanji when JLPT filter changes
+  useEffect(() => {
+    let cancelled = false
 
-    // Filter by JLPT level
-    if (kanjiJlptFilter !== null) {
-      result = result.filter((k) => k.kanji.jlpt_level === kanjiJlptFilter)
+    async function loadKanji() {
+      setLoading(true)
+      try {
+        const data = await jp.getAllKanji(kanjiJlptFilter ?? undefined)
+        if (!cancelled) setKanjiList(data)
+      } catch (err) {
+        console.error('[KanjiBrowser] Failed to load kanji:', err)
+        if (!cancelled) setKanjiList([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
+    loadKanji()
+    return () => { cancelled = true }
+  }, [kanjiJlptFilter, jp.getAllKanji])
+
+  // Load radicals for components view
+  useEffect(() => {
+    if (kanjiBrowserView !== 'components') return
+    let cancelled = false
+
+    async function loadRadicals() {
+      try {
+        const data = await jp.getAllRadicals()
+        if (!cancelled) setRadicals(data)
+      } catch (err) {
+        console.error('[KanjiBrowser] Failed to load radicals:', err)
+      }
+    }
+
+    loadRadicals()
+    return () => { cancelled = true }
+  }, [kanjiBrowserView, jp.getAllRadicals])
+
+  // Map kanji to KanjiEntry with mastery (default to 'unknown' for now)
+  // TODO: Load SRS cards in batch to determine actual mastery
+  const kanjiEntries = useMemo<KanjiEntry[]>(() => {
+    return kanjiList.map((kanji) => ({
+      kanji,
+      mastery: 'unknown' as JpMasteryLevel,
+    }))
+  }, [kanjiList])
+
+  const filteredKanji = useMemo(() => {
+    let result = kanjiEntries
 
     // Filter by search query
     if (kanjiSearchQuery.trim()) {
@@ -108,13 +109,13 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
         (k) =>
           k.kanji.character.includes(q) ||
           k.kanji.meanings.some((m) => m.toLowerCase().includes(q)) ||
-          k.kanji.on_readings.some((r) => r.toLowerCase().includes(q)) ||
-          k.kanji.kun_readings.some((r) => r.toLowerCase().includes(q)),
+          (k.kanji.on_readings ?? []).some((r) => r.toLowerCase().includes(q)) ||
+          (k.kanji.kun_readings ?? []).some((r) => r.toLowerCase().includes(q)),
       )
     }
 
     return result
-  }, [kanjiJlptFilter, kanjiSearchQuery])
+  }, [kanjiEntries, kanjiSearchQuery])
 
   const handleKanjiClick = useCallback(
     (entry: KanjiEntry) => {
@@ -132,6 +133,17 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
     const learning = filteredKanji.filter((k) => k.mastery === 'learning').length
     return { total, mastered, known, learning }
   }, [filteredKanji])
+
+  if (loading) {
+    return (
+      <div className={cn('flex items-center justify-center h-full bg-obsidian', className)}>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-warm-gray" />
+          <p className="text-sm text-warm-gray">Loading kanji...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex flex-col h-full bg-obsidian', className)}>
@@ -230,6 +242,7 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
         )}
         {kanjiBrowserView === 'components' && (
           <ComponentsView
+            radicals={radicals}
             kanji={filteredKanji}
             onSelect={handleKanjiClick}
           />
@@ -279,9 +292,11 @@ function GridView({
             </span>
 
             {/* JLPT badge */}
-            <span className="text-[9px] text-warm-gray/60 mt-0.5">
-              N{entry.kanji.jlpt_level}
-            </span>
+            {entry.kanji.jlpt_level && (
+              <span className="text-[9px] text-warm-gray/60 mt-0.5">
+                N{entry.kanji.jlpt_level}
+              </span>
+            )}
 
             {/* Mastery bar */}
             <div className="w-full h-1 rounded-full bg-ash-stone/20 mt-1.5 overflow-hidden">
@@ -331,6 +346,8 @@ function ListView({
     <div className="p-2">
       {kanji.map((entry) => {
         const isSelected = selectedId === entry.kanji.id
+        const onReadings = entry.kanji.on_readings ?? []
+        const kunReadings = entry.kanji.kun_readings ?? []
         return (
           <button
             key={entry.kanji.id}
@@ -351,16 +368,18 @@ function ListView({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-parchment">{entry.kanji.meanings.join(', ')}</span>
-                <Badge variant="outline" className="text-[9px] h-4 px-1">
-                  N{entry.kanji.jlpt_level}
-                </Badge>
+                {entry.kanji.jlpt_level && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1">
+                    N{entry.kanji.jlpt_level}
+                  </Badge>
+                )}
               </div>
               <div className="text-xs text-warm-gray mt-0.5">
-                <span className="font-mono">{entry.kanji.on_readings.join(', ')}</span>
-                {entry.kanji.kun_readings.length > 0 && (
+                <span className="font-mono">{onReadings.join(', ')}</span>
+                {kunReadings.length > 0 && (
                   <>
                     <span className="mx-1.5 text-ash-stone">|</span>
-                    <span className="font-mono">{entry.kanji.kun_readings.join(', ')}</span>
+                    <span className="font-mono">{kunReadings.join(', ')}</span>
                   </>
                 )}
               </div>
@@ -411,13 +430,16 @@ function ListView({
 // ── Components (Tree) View ───────────────────────────────────────────
 
 function ComponentsView({
+  radicals,
   kanji,
   onSelect,
 }: {
+  radicals: JpRadical[]
   kanji: KanjiEntry[]
   onSelect: (entry: KanjiEntry) => void
 }) {
-  const kanjiMap = useMemo(() => {
+  // Build a map from kanji character to KanjiEntry for quick lookup
+  const kanjiCharMap = useMemo(() => {
     const map = new Map<string, KanjiEntry>()
     for (const k of kanji) {
       map.set(k.kanji.character, k)
@@ -425,50 +447,79 @@ function ComponentsView({
     return map
   }, [kanji])
 
+  if (radicals.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-sm text-warm-gray">No radicals found in the database</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-3 space-y-4">
-      {COMPONENT_TREE.map((group) => {
-        const visibleKanji = group.kanji
-          .map((c) => kanjiMap.get(c))
-          .filter(Boolean) as KanjiEntry[]
-        if (visibleKanji.length === 0) return null
+      {radicals.map((radical) => {
+        // Find kanji that contain this radical character as a component
+        // We match by character since the component relationship is in the DB
+        const matchingKanji = kanji.filter((entry) => {
+          // Simple heuristic: check if kanji character visually relates to radical
+          // For a proper implementation, this would use getKanjiComponents
+          // but for the browser view we show all kanji alongside their radicals
+          return entry.kanji.character !== radical.character
+        })
+
+        // For now, show all loaded kanji alongside radicals as a browsable list
+        // A more precise mapping would require batch-loading component relationships
 
         return (
-          <div key={group.radical} className="border border-ash-stone/30 rounded-lg p-3">
+          <div key={radical.id} className="border border-ash-stone/30 rounded-lg p-3">
             {/* Radical header */}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl" style={{ fontFamily: 'system-ui, sans-serif' }}>
-                {group.radical}
+                {radical.character}
               </span>
               <div>
-                <span className="text-xs text-warm-gray">{group.meaning}</span>
+                <span className="text-xs text-warm-gray">{radical.meaning}</span>
                 <Badge variant="outline" className="text-[9px] h-4 px-1 ml-2">
                   radical
                 </Badge>
               </div>
+              <span className="text-[10px] text-warm-gray/60 ml-auto">
+                {radical.stroke_count} strokes
+              </span>
             </div>
 
-            {/* Child kanji */}
-            <div className="flex flex-wrap gap-1.5 pl-4 border-l-2 border-ash-stone/20 ml-3">
-              {visibleKanji.map((entry) => (
-                <button
-                  key={entry.kanji.id}
-                  onClick={() => onSelect(entry)}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded bg-charcoal-slate/50 border border-ash-stone/20 hover:border-ash-stone/50 transition-colors cursor-pointer"
-                >
-                  <span className="text-xl" style={{ fontFamily: 'system-ui, sans-serif' }}>
-                    {entry.kanji.character}
-                  </span>
-                  <span className="text-[10px] text-warm-gray">{entry.kanji.meanings[0]}</span>
-                  <span
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full',
-                      MASTERY_BAR_COLORS[entry.mastery],
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
+            {/* Kanji that share this radical character in their composition */}
+            {kanjiCharMap.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 pl-4 border-l-2 border-ash-stone/20 ml-3">
+                {kanji
+                  .filter((entry) => {
+                    // Show kanji whose character includes the radical character
+                    // or whose semantic/phonetic component references the radical
+                    return (
+                      entry.kanji.semantic_component === radical.id ||
+                      entry.kanji.phonetic_component === radical.id
+                    )
+                  })
+                  .map((entry) => (
+                    <button
+                      key={entry.kanji.id}
+                      onClick={() => onSelect(entry)}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded bg-charcoal-slate/50 border border-ash-stone/20 hover:border-ash-stone/50 transition-colors cursor-pointer"
+                    >
+                      <span className="text-xl" style={{ fontFamily: 'system-ui, sans-serif' }}>
+                        {entry.kanji.character}
+                      </span>
+                      <span className="text-[10px] text-warm-gray">{entry.kanji.meanings[0]}</span>
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          MASTERY_BAR_COLORS[entry.mastery],
+                        )}
+                      />
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
         )
       })}

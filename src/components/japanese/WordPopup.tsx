@@ -1,16 +1,12 @@
-import { X, BookOpen, Plus, Globe } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import type { JpTokenizedWord, JpMasteryLevel } from '@/types'
+import { cn } from '@/lib/utils'
 
 interface WordPopupProps {
   word: JpTokenizedWord
   position: { x: number; y: number }
-  onClose: () => void
   onMarkKnown: (lemma: string) => void
   onAddToSrs: (lemma: string) => void
-  onViewInWeb: (lemma: string) => void
+  onClose: () => void
 }
 
 const MASTERY_LABELS: Record<JpMasteryLevel, string> = {
@@ -22,116 +18,81 @@ const MASTERY_LABELS: Record<JpMasteryLevel, string> = {
 }
 
 const MASTERY_COLORS: Record<JpMasteryLevel, string> = {
-  unknown: 'text-oxide-red',
-  seen: 'text-warm-gray',
-  learning: 'text-icon-gold',
-  known: 'text-parchment',
-  mastered: 'text-verdigris',
+  unknown: 'text-warm-gray',
+  seen: 'text-blue-400',
+  learning: 'text-yellow-400',
+  known: 'text-emerald-400',
+  mastered: 'text-icon-gold',
 }
 
-export function WordPopup({
-  word,
-  position,
-  onClose,
-  onMarkKnown,
-  onAddToSrs,
-  onViewInWeb,
-}: WordPopupProps) {
+export function WordPopup({ word, position, onMarkKnown, onAddToSrs, onClose }: WordPopupProps) {
   return (
-    <div
-      className="fixed z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-      style={{
-        left: Math.min(position.x, window.innerWidth - 320),
-        top: position.y + 8,
-      }}
-    >
-      <div className="w-[300px] bg-charcoal-slate border border-ash-stone/50 rounded-lg shadow-xl overflow-hidden">
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+
+      {/* Popup */}
+      <div
+        className="fixed z-50 bg-charcoal-slate border border-ash-stone/70 rounded-lg shadow-xl p-4 min-w-[240px] max-w-[320px]"
+        style={{
+          left: Math.min(position.x, window.innerWidth - 340),
+          top: position.y + 8,
+        }}
+      >
         {/* Header */}
-        <div className="flex items-start justify-between p-4 pb-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl text-parchment font-medium">
-                {word.surface}
-              </span>
-              {word.reading && word.reading !== word.surface && (
-                <span className="text-sm text-warm-gray">
-                  ({word.reading})
-                </span>
-              )}
-            </div>
-            {word.lemma !== word.surface && (
-              <div className="text-xs text-warm-gray/60 mt-0.5">
-                dict: {word.lemma}
-              </div>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={onClose}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex items-baseline gap-3 mb-2">
+          <span className="text-2xl font-serif text-parchment">{word.surface}</span>
+          {word.reading && word.reading !== word.surface && (
+            <span className="text-sm text-warm-gray">{word.reading}</span>
+          )}
         </div>
 
-        {/* Meaning */}
-        {word.meaning && (
-          <div className="px-4 pb-2">
-            <p className="text-sm text-parchment/90">{word.meaning}</p>
+        {/* Lemma (if different from surface) */}
+        {word.lemma !== word.surface && (
+          <div className="text-xs text-warm-gray/60 mb-2">
+            Dictionary form: <span className="text-warm-gray">{word.lemma}</span>
           </div>
         )}
 
-        {/* Metadata row */}
-        <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
-          {word.jlpt && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-icon-gold/40 text-icon-gold">
-              {word.jlpt}
-            </Badge>
-          )}
-          {word.pos && (
-            <span className="text-xs text-warm-gray/70">{word.pos}</span>
-          )}
-          <span className="text-xs text-warm-gray/40 mx-1">|</span>
+        {/* Meaning */}
+        {word.meaning && (
+          <div className="text-sm text-parchment/80 mb-2">{word.meaning}</div>
+        )}
+
+        {/* Part of speech */}
+        {word.pos && (
+          <div className="text-xs text-warm-gray/50 mb-2">{word.pos}</div>
+        )}
+
+        {/* Mastery badge */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs text-warm-gray/50">Mastery:</span>
           <span className={cn('text-xs font-medium', MASTERY_COLORS[word.mastery])}>
             {MASTERY_LABELS[word.mastery]}
           </span>
+          {word.jlpt && (
+            <span className="text-xs bg-deep-azure/20 text-deep-azure px-1.5 py-0.5 rounded">
+              {word.jlpt}
+            </span>
+          )}
         </div>
-
-        {/* Divider */}
-        <div className="h-px bg-ash-stone/30" />
 
         {/* Actions */}
-        <div className="flex items-center gap-1 p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 h-8 text-xs text-warm-gray hover:text-parchment"
+        <div className="flex gap-2 pt-2 border-t border-ash-stone/50">
+          <button
+            className="flex-1 text-xs px-3 py-1.5 rounded bg-verdigris/20 text-verdigris hover:bg-verdigris/30 transition-colors"
             onClick={() => onMarkKnown(word.lemma)}
           >
-            <BookOpen className="h-3.5 w-3.5 mr-1.5" />
             Mark Known
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 h-8 text-xs text-warm-gray hover:text-parchment"
+          </button>
+          <button
+            className="flex-1 text-xs px-3 py-1.5 rounded bg-deep-azure/20 text-deep-azure hover:bg-deep-azure/30 transition-colors"
             onClick={() => onAddToSrs(word.lemma)}
           >
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
             Add to SRS
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 h-8 text-xs text-warm-gray hover:text-parchment"
-            onClick={() => onViewInWeb(word.lemma)}
-          >
-            <Globe className="h-3.5 w-3.5 mr-1.5" />
-            Web
-          </Button>
+          </button>
         </div>
       </div>
-    </div>
+    </>
   )
 }

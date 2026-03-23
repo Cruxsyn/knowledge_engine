@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useJapaneseStore } from '@/stores/japaneseStore'
+import { useJapanese } from '@/hooks/useJapanese'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { X, Network, BookOpen, Layers, MessageSquare } from 'lucide-react'
+import { X, Network, BookOpen, Layers, MessageSquare, Loader2 } from 'lucide-react'
 import type {
   JpGraphNode,
   JpGraphEdge,
@@ -16,6 +17,7 @@ import type {
   JpGrammar,
   JpMasteryLevel,
   JpAssociationCategory,
+  JpAssociation,
 } from '@/types'
 
 // ── Mastery display config ───────────────────────────────────────────
@@ -65,7 +67,7 @@ function RadicalDetail({
   onNavigate: (id: string, type: JpItemType) => void
 }) {
   const kanjiWithThis = edges
-    .filter((e) => e.source === data.id && e.relation === 'contains_component')
+    .filter((e) => e.source === data.id && e.relation === 'CONTAINS_COMPONENT')
     .map((e) => allNodes.find((n) => n.id === e.target))
     .filter(Boolean) as JpGraphNode[]
 
@@ -87,12 +89,6 @@ function RadicalDetail({
             <span className="text-warm-gray">Strokes</span>
             <span>{data.stroke_count}</span>
           </div>
-          {data.reading && (
-            <div className="flex justify-between">
-              <span className="text-warm-gray">Reading</span>
-              <span>{data.reading}</span>
-            </div>
-          )}
         </div>
       </Section>
 
@@ -130,12 +126,12 @@ function KanjiDetailPanel({
   onNavigate: (id: string, type: JpItemType) => void
 }) {
   const components = edges
-    .filter((e) => e.target === data.id && e.relation === 'contains_component')
+    .filter((e) => e.target === data.id && e.relation === 'CONTAINS_COMPONENT')
     .map((e) => allNodes.find((n) => n.id === e.source))
     .filter(Boolean) as JpGraphNode[]
 
   const vocabulary = edges
-    .filter((e) => e.source === data.id && e.relation === 'compound_word')
+    .filter((e) => e.source === data.id && e.relation === 'COMPOUND_WORD')
     .map((e) => allNodes.find((n) => n.id === e.target))
     .filter(Boolean) as JpGraphNode[]
 
@@ -147,26 +143,30 @@ function KanjiDetailPanel({
     })
     .filter(Boolean) as JpGraphNode[]
 
+  const onReadings = data.on_readings ?? []
+  const kunReadings = data.kun_readings ?? []
+  const mnemonic = data.mnemonic_meaning || data.mnemonic_reading
+
   return (
     <>
-      {data.mnemonic && (
+      {mnemonic && (
         <Section title="Mnemonic" icon={<MessageSquare className="h-3 w-3" />}>
-          <p className="italic text-warm-gray">{data.mnemonic}</p>
+          <p className="italic text-warm-gray">{mnemonic}</p>
         </Section>
       )}
 
       <Section title="Readings" icon={<BookOpen className="h-3 w-3" />}>
         <div className="space-y-1">
-          {data.on_readings.length > 0 && (
+          {onReadings.length > 0 && (
             <div className="flex gap-2">
               <span className="text-warm-gray text-xs w-16 shrink-0">On&apos;yomi</span>
-              <span className="font-mono">{data.on_readings.join('  ·  ')}</span>
+              <span className="font-mono">{onReadings.join('  ·  ')}</span>
             </div>
           )}
-          {data.kun_readings.length > 0 && (
+          {kunReadings.length > 0 && (
             <div className="flex gap-2">
               <span className="text-warm-gray text-xs w-16 shrink-0">Kun&apos;yomi</span>
-              <span className="font-mono">{data.kun_readings.join('  ·  ')}</span>
+              <span className="font-mono">{kunReadings.join('  ·  ')}</span>
             </div>
           )}
         </div>
@@ -188,10 +188,12 @@ function KanjiDetailPanel({
               <span>{data.grade}</span>
             </div>
           )}
-          <div className="flex justify-between">
-            <span className="text-warm-gray">JLPT</span>
-            <span>N{data.jlpt_level}</span>
-          </div>
+          {data.jlpt_level && (
+            <div className="flex justify-between">
+              <span className="text-warm-gray">JLPT</span>
+              <span>N{data.jlpt_level}</span>
+            </div>
+          )}
         </div>
       </Section>
 
@@ -267,7 +269,7 @@ function VocabDetail({
   onNavigate: (id: string, type: JpItemType) => void
 }) {
   const kanjiBreakdown = edges
-    .filter((e) => e.target === data.id && e.relation === 'compound_word')
+    .filter((e) => e.target === data.id && e.relation === 'COMPOUND_WORD')
     .map((e) => allNodes.find((n) => n.id === e.source))
     .filter(Boolean) as JpGraphNode[]
 
@@ -317,13 +319,13 @@ function VocabDetail({
         </Section>
       )}
 
-      {data.example_sentences.length > 0 && (
+      {data.sentences && data.sentences.length > 0 && (
         <Section title="Example sentences">
           <div className="space-y-2">
-            {data.example_sentences.map((ex, i) => (
+            {data.sentences.map((ex, i) => (
               <div key={i} className="pl-2 border-l-2 border-ash-stone/30">
-                <p className="text-base">{ex.ja}</p>
-                <p className="text-xs text-warm-gray mt-0.5">{ex.en}</p>
+                <p className="text-base">{ex.japanese}</p>
+                {ex.english && <p className="text-xs text-warm-gray mt-0.5">{ex.english}</p>}
               </div>
             ))}
           </div>
@@ -340,9 +342,11 @@ function GrammarDetail({ data }: { data: JpGrammar }) {
         <p>{data.meaning}</p>
       </Section>
 
-      <Section title="Formation">
-        <p className="font-mono text-sm bg-charcoal-slate px-2 py-1 rounded">{data.formation}</p>
-      </Section>
+      {data.formation && (
+        <Section title="Formation">
+          <p className="font-mono text-sm bg-charcoal-slate px-2 py-1 rounded">{data.formation}</p>
+        </Section>
+      )}
 
       {data.notes && (
         <Section title="Notes">
@@ -350,12 +354,12 @@ function GrammarDetail({ data }: { data: JpGrammar }) {
         </Section>
       )}
 
-      {data.example_sentences.length > 0 && (
+      {data.examples && data.examples.length > 0 && (
         <Section title="Example sentences">
           <div className="space-y-2">
-            {data.example_sentences.map((ex, i) => (
+            {data.examples.map((ex, i) => (
               <div key={i} className="pl-2 border-l-2 border-ash-stone/30">
-                <p className="text-base">{ex.ja}</p>
+                <p className="text-base">{ex.jp}</p>
                 <p className="text-xs text-warm-gray mt-0.5">{ex.en}</p>
               </div>
             ))}
@@ -377,12 +381,14 @@ interface NodeDetailProps {
 
 export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: NodeDetailProps) {
   const { selectedNodeId, selectedNodeType, setSelectedNode } = useJapaneseStore()
+  const jp = useJapanese()
 
   const node = useMemo(
     () => graph.nodes.find((n) => n.id === selectedNodeId),
     [graph.nodes, selectedNodeId],
   )
 
+  // Use graph edges for the selected node
   const nodeEdges = useMemo(
     () =>
       graph.edges.filter(
@@ -391,13 +397,43 @@ export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: Node
     [graph.edges, selectedNodeId],
   )
 
+  // Load real association counts from the DB
+  const [dbAssociations, setDbAssociations] = useState<JpAssociation[]>([])
+  const [loadingAssociations, setLoadingAssociations] = useState(false)
+
+  useEffect(() => {
+    if (!selectedNodeId || !selectedNodeType) {
+      setDbAssociations([])
+      return
+    }
+
+    let cancelled = false
+    setLoadingAssociations(true)
+
+    async function load() {
+      try {
+        const assocs = await jp.getAssociationsForNode(selectedNodeId!, selectedNodeType!)
+        if (!cancelled) setDbAssociations(assocs)
+      } catch (err) {
+        console.error('[NodeDetail] Failed to load associations:', err)
+        if (!cancelled) setDbAssociations([])
+      } finally {
+        if (!cancelled) setLoadingAssociations(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [selectedNodeId, selectedNodeType, jp.getAssociationsForNode])
+
+  // Compute category counts from real DB associations
   const categoryCounts = useMemo(() => {
     const counts: Partial<Record<JpAssociationCategory, number>> = {}
-    for (const e of nodeEdges) {
-      counts[e.category] = (counts[e.category] ?? 0) + 1
+    for (const a of dbAssociations) {
+      counts[a.category] = (counts[a.category] ?? 0) + 1
     }
     return counts
-  }, [nodeEdges])
+  }, [dbAssociations])
 
   const handleNavigate = (id: string, type: JpItemType) => {
     setSelectedNode(id, type)
@@ -453,7 +489,7 @@ export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: Node
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0"
-            onClick={() => setSelectedNode(null)}
+            onClick={() => setSelectedNode(null, null)}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -479,7 +515,7 @@ export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: Node
             onNavigate={handleNavigate}
           />
         )}
-        {node.type === 'vocabulary' && node.data && (
+        {node.type === 'word' && node.data && (
           <VocabDetail
             data={node.data as JpVocabulary}
             edges={nodeEdges}
@@ -491,9 +527,14 @@ export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: Node
           <GrammarDetail data={node.data as JpGrammar} />
         )}
 
-        {/* Association counts */}
-        {Object.keys(categoryCounts).length > 0 && (
-          <Section title="Associations" icon={<Network className="h-3 w-3" />}>
+        {/* Association counts from real DB data */}
+        <Section title="Associations" icon={<Network className="h-3 w-3" />}>
+          {loadingAssociations ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin text-warm-gray" />
+              <span className="text-xs text-warm-gray">Loading associations...</span>
+            </div>
+          ) : Object.keys(categoryCounts).length > 0 ? (
             <div className="space-y-1">
               {(Object.entries(categoryCounts) as [JpAssociationCategory, number][]).map(
                 ([cat, count]) => (
@@ -504,8 +545,10 @@ export function NodeDetail({ graph, className, onNavigate, onViewInGraph }: Node
                 ),
               )}
             </div>
-          </Section>
-        )}
+          ) : (
+            <p className="text-xs text-warm-gray">No associations found</p>
+          )}
+        </Section>
 
         {/* View in graph button */}
         {onViewInGraph && (

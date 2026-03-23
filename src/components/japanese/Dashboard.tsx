@@ -252,7 +252,7 @@ export function Dashboard({ stats }: DashboardProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
+    <div className="space-y-6">
       {/* Top row: Today's Study + Current Streak */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Today's Study */}

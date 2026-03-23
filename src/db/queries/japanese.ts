@@ -695,26 +695,25 @@ function resolveGraphNode(id: string, type: JpItemType): JpGraphNode | null {
     case 'radical': {
       const r = getRadicalById(id)
       if (!r) return null
-      return { id, type: 'radical', label: r.character, sublabel: r.meaning, mastery: 'unknown' }
+      return { id, type: 'radical', label: r.character, sublabel: r.meaning, mastery: 'unknown', data: r }
     }
     case 'kanji': {
       const k = getKanjiById(id)
       if (!k) return null
-      // Look up mastery from SRS cards
       const mastery = getItemMastery(id, 'kanji')
-      return { id, type: 'kanji', label: k.character, sublabel: k.meanings[0], mastery, jlpt_level: k.jlpt_level }
+      return { id, type: 'kanji', label: k.character, sublabel: k.meanings[0], mastery, jlpt_level: k.jlpt_level, data: k }
     }
     case 'word': {
       const v = getVocabById(id)
       if (!v) return null
       const mastery = getItemMastery(id, 'word')
-      return { id, type: 'word', label: v.word, sublabel: v.meanings[0], mastery, jlpt_level: v.jlpt_level }
+      return { id, type: 'word', label: v.word, sublabel: v.meanings[0], mastery, jlpt_level: v.jlpt_level, data: v }
     }
     case 'grammar': {
       const g = getGrammarById(id)
       if (!g) return null
       const mastery = getItemMastery(id, 'grammar')
-      return { id, type: 'grammar', label: g.pattern, sublabel: g.meaning, mastery, jlpt_level: g.jlpt_level }
+      return { id, type: 'grammar', label: g.pattern, sublabel: g.meaning, mastery, jlpt_level: g.jlpt_level, data: g }
     }
     default:
       return null

@@ -203,7 +203,7 @@ export function useJapanese() {
 
   // ---- Associations / Graph ----
 
-  const getAssociationsForNode = useCallback(async (nodeId: string, nodeType?: string) => {
+  const getAssociationsForNode = useCallback(async (nodeId: string, nodeType: import('@/types').JpItemType | 'sentence') => {
     if (!isDbReady) return []
     try {
       const { getAssociationsForNode: fn } = await import('@/db/queries/japanese')
@@ -225,11 +225,11 @@ export function useJapanese() {
     }
   }, [isDbReady, refreshTrigger])
 
-  const getGraphData = useCallback(async (rootId: string, depth?: number) => {
+  const getGraphData = useCallback(async (rootId: string, rootType: import('@/types').JpItemType, depth?: number) => {
     if (!isDbReady) return { nodes: [], edges: [] }
     try {
       const { getGraphData: fn } = await import('@/db/queries/japanese')
-      return fn(rootId, depth)
+      return fn(rootId, rootType, depth ?? 2)
     } catch (err) {
       console.error('[useJapanese] getGraphData error:', err)
       return { nodes: [], edges: [] }

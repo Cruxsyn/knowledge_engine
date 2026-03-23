@@ -28,7 +28,7 @@ export async function initTokenizer(): Promise<void> {
     // In browser, the BrowserDictionaryLoader fetches .dat.gz files
     // from the given path. We point to the node_modules directory
     // which Vite serves as static assets, or to a public/dict path.
-    const dicPath = '/node_modules/@sglkc/kuromoji/dict/'
+    const dicPath = '/dict/kuromoji/'
 
     kuromoji.builder({ dicPath }).build((err: Error | null, tokenizer: Tokenizer<IpadicFeatures>) => {
       if (err) {

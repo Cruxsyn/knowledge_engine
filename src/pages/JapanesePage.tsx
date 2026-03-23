@@ -1,7 +1,13 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/components/japanese/Dashboard'
 import { ReviewSession } from '@/components/japanese/ReviewSession'
+import { AssociationGraph } from '@/components/japanese/AssociationGraph'
+import { KanjiBrowser } from '@/components/japanese/KanjiBrowser'
+import { ReadingPractice } from '@/components/japanese/ReadingPractice'
+import { SettingsPanel } from '@/components/japanese/SettingsPanel'
+import { ProgressPanel } from '@/components/japanese/ProgressPanel'
 import { useJapaneseStore } from '@/stores/japaneseStore'
 import {
   LayoutDashboard,
@@ -10,7 +16,6 @@ import {
   type LucideIcon,
   BookText,
   Settings,
-  Construction,
 } from 'lucide-react'
 
 interface TabDef {
@@ -39,40 +44,43 @@ function getActiveTab(pathname: string): string {
   return 'dashboard'
 }
 
-function PlaceholderTab({ name }: { name: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <Construction className="h-12 w-12 text-warm-gray/40" />
-      <h3 className="text-xl font-serif text-parchment">{name}</h3>
-      <p className="text-warm-gray text-sm max-w-md text-center">
-        This section is under construction. Check back soon.
-      </p>
-    </div>
-  )
-}
-
 export function JapanesePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const activeTab = getActiveTab(location.pathname)
   const stats = useJapaneseStore((s) => s.stats)
 
+  // Load stats on mount
+  useEffect(() => {
+    useJapaneseStore.getState().loadStats()
+  }, [])
+
   function renderContent() {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard stats={stats} />
+        return (
+          <div className="p-6 space-y-6 overflow-y-auto h-full">
+            <Dashboard stats={stats} />
+            <ProgressPanel />
+          </div>
+        )
       case 'review':
         return <ReviewSession />
       case 'explore':
-        return <PlaceholderTab name="Explore" />
+        return <AssociationGraph />
       case 'kanji':
-        return <PlaceholderTab name="Kanji" />
+        return <KanjiBrowser />
       case 'reading':
-        return <PlaceholderTab name="Reading" />
+        return <ReadingPractice />
       case 'settings':
-        return <PlaceholderTab name="Settings" />
+        return <SettingsPanel />
       default:
-        return <Dashboard stats={stats} />
+        return (
+          <div className="p-6 space-y-6 overflow-y-auto h-full">
+            <Dashboard stats={stats} />
+            <ProgressPanel />
+          </div>
+        )
     }
   }
 

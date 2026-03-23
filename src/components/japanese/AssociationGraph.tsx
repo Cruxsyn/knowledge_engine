@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useJapaneseStore } from '@/stores/japaneseStore'
+import { useJapanese } from '@/hooks/useJapanese'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { Search, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Search, RotateCcw, ZoomIn, ZoomOut, Loader2 } from 'lucide-react'
 import type {
   JpGraphData,
   JpGraphNode,
@@ -12,81 +13,14 @@ import type {
   JpItemType,
   JpAssociationCategory,
   JpMasteryLevel,
-  JpKanji,
-  JpRadical,
-  JpVocabulary,
-  JpGrammar,
 } from '@/types'
-
-// ── Mock Data ────────────────────────────────────────────────────────
-
-function buildMockGraph(): JpGraphData {
-  const nodes: JpGraphNode[] = [
-    // Radicals
-    { id: 'r-1', type: 'radical', label: '日', sublabel: 'sun/day', mastery: 'mastered', data: { id: 'r-1', character: '日', meaning: 'sun, day', stroke_count: 4, mnemonic: 'A window with a line through it - the sun shining through' } as JpRadical },
-    { id: 'r-2', type: 'radical', label: '月', sublabel: 'moon/month', mastery: 'known', data: { id: 'r-2', character: '月', meaning: 'moon, month', stroke_count: 4, mnemonic: 'A crescent moon' } as JpRadical },
-    { id: 'r-3', type: 'radical', label: '木', sublabel: 'tree', mastery: 'mastered', data: { id: 'r-3', character: '木', meaning: 'tree, wood', stroke_count: 4, mnemonic: 'A tree with branches and roots' } as JpRadical },
-    { id: 'r-4', type: 'radical', label: '水', sublabel: 'water', mastery: 'known', data: { id: 'r-4', character: '水', meaning: 'water', stroke_count: 4, mnemonic: 'Water flowing down a cliff' } as JpRadical },
-    { id: 'r-5', type: 'radical', label: '火', sublabel: 'fire', mastery: 'learning', data: { id: 'r-5', character: '火', meaning: 'fire', stroke_count: 4, mnemonic: 'A person with arms raised in flames' } as JpRadical },
-    // Kanji
-    { id: 'k-1', type: 'kanji', label: '明', sublabel: 'bright', mastery: 'learning', jlpt_level: 4, data: { id: 'k-1', character: '明', meanings: ['bright', 'clear', 'light'], on_readings: ['メイ', 'ミョウ'], kun_readings: ['あか.るい', 'あき.らか'], jlpt_level: 4, grade: 2, stroke_count: 8, mnemonic: 'Sun + Moon = bright', components: ['r-1', 'r-2'] } as JpKanji },
-    { id: 'k-2', type: 'kanji', label: '林', sublabel: 'grove', mastery: 'known', jlpt_level: 3, data: { id: 'k-2', character: '林', meanings: ['grove', 'forest'], on_readings: ['リン'], kun_readings: ['はやし'], jlpt_level: 3, grade: 1, stroke_count: 8, mnemonic: 'Two trees together form a grove', components: ['r-3'] } as JpKanji },
-    { id: 'k-3', type: 'kanji', label: '森', sublabel: 'forest', mastery: 'seen', jlpt_level: 3, data: { id: 'k-3', character: '森', meanings: ['forest', 'woods'], on_readings: ['シン'], kun_readings: ['もり'], jlpt_level: 3, grade: 1, stroke_count: 12, mnemonic: 'Three trees make a dense forest', components: ['r-3'] } as JpKanji },
-    { id: 'k-4', type: 'kanji', label: '山', sublabel: 'mountain', mastery: 'mastered', jlpt_level: 5, data: { id: 'k-4', character: '山', meanings: ['mountain', 'hill'], on_readings: ['サン', 'セン'], kun_readings: ['やま'], jlpt_level: 5, grade: 1, stroke_count: 3, mnemonic: 'Three peaks of a mountain', components: [] } as JpKanji },
-    { id: 'k-5', type: 'kanji', label: '川', sublabel: 'river', mastery: 'mastered', jlpt_level: 5, data: { id: 'k-5', character: '川', meanings: ['river', 'stream'], on_readings: ['セン'], kun_readings: ['かわ'], jlpt_level: 5, grade: 1, stroke_count: 3, mnemonic: 'Three flowing streams', components: [] } as JpKanji },
-    { id: 'k-6', type: 'kanji', label: '日', sublabel: 'day/sun', mastery: 'mastered', jlpt_level: 5, data: { id: 'k-6', character: '日', meanings: ['day', 'sun', 'Japan'], on_readings: ['ニチ', 'ジツ'], kun_readings: ['ひ', 'か'], jlpt_level: 5, grade: 1, stroke_count: 4, mnemonic: 'The sun framed in a window', components: ['r-1'] } as JpKanji },
-    { id: 'k-7', type: 'kanji', label: '月', sublabel: 'month/moon', mastery: 'known', jlpt_level: 5, data: { id: 'k-7', character: '月', meanings: ['month', 'moon'], on_readings: ['ゲツ', 'ガツ'], kun_readings: ['つき'], jlpt_level: 5, grade: 1, stroke_count: 4, mnemonic: 'A crescent moon', components: ['r-2'] } as JpKanji },
-    { id: 'k-8', type: 'kanji', label: '火', sublabel: 'fire', mastery: 'learning', jlpt_level: 5, data: { id: 'k-8', character: '火', meanings: ['fire'], on_readings: ['カ'], kun_readings: ['ひ', 'ほ'], jlpt_level: 5, grade: 1, stroke_count: 4, mnemonic: 'A person with sparks flying', components: ['r-5'] } as JpKanji },
-    // Vocabulary
-    { id: 'v-1', type: 'vocabulary', label: '明日', sublabel: 'あした - tomorrow', mastery: 'learning', data: { id: 'v-1', word: '明日', reading: 'あした', meanings: ['tomorrow'], kanji_ids: ['k-1', 'k-6'], example_sentences: [{ ja: '明日は月曜日です。', en: 'Tomorrow is Monday.' }], part_of_speech: 'noun' } as JpVocabulary },
-    { id: 'v-2', type: 'vocabulary', label: '山川', sublabel: 'やまかわ - mountains and rivers', mastery: 'seen', data: { id: 'v-2', word: '山川', reading: 'やまかわ', meanings: ['mountains and rivers', 'landscape'], kanji_ids: ['k-4', 'k-5'], example_sentences: [{ ja: '日本の山川は美しい。', en: "Japan's mountains and rivers are beautiful." }], part_of_speech: 'noun' } as JpVocabulary },
-    { id: 'v-3', type: 'vocabulary', label: '火山', sublabel: 'かざん - volcano', mastery: 'unknown', data: { id: 'v-3', word: '火山', reading: 'かざん', meanings: ['volcano'], kanji_ids: ['k-8', 'k-4'], example_sentences: [{ ja: '富士山は火山です。', en: 'Mt. Fuji is a volcano.' }], part_of_speech: 'noun' } as JpVocabulary },
-    { id: 'v-4', type: 'vocabulary', label: '森林', sublabel: 'しんりん - forest', mastery: 'seen', data: { id: 'v-4', word: '森林', reading: 'しんりん', meanings: ['forest', 'woods'], kanji_ids: ['k-3', 'k-2'], example_sentences: [{ ja: '森林を守ろう。', en: "Let's protect the forests." }], part_of_speech: 'noun' } as JpVocabulary },
-    { id: 'v-5', type: 'vocabulary', label: '明るい', sublabel: 'あかるい - bright', mastery: 'learning', data: { id: 'v-5', word: '明るい', reading: 'あかるい', meanings: ['bright', 'light', 'cheerful'], kanji_ids: ['k-1'], example_sentences: [{ ja: 'この部屋は明るい。', en: 'This room is bright.' }], part_of_speech: 'i-adjective' } as JpVocabulary },
-    // Grammar
-    { id: 'g-1', type: 'grammar', label: '〜ている', sublabel: 'ongoing state', mastery: 'known', data: { id: 'g-1', pattern: '〜ている', meaning: 'Indicates an ongoing action or resultant state', formation: 'Verb (て-form) + いる', jlpt_level: 5, example_sentences: [{ ja: '山に登っている。', en: 'I am climbing the mountain.' }, { ja: '火が燃えている。', en: 'The fire is burning.' }] } as JpGrammar },
-    { id: 'g-2', type: 'grammar', label: '〜から', sublabel: 'because/from', mastery: 'mastered', data: { id: 'g-2', pattern: '〜から', meaning: 'Because / Since / From', formation: 'Clause + から', jlpt_level: 5, example_sentences: [{ ja: '明日は休みだから、山に行く。', en: "Because tomorrow is a holiday, I'll go to the mountain." }] } as JpGrammar },
-  ]
-
-  const edges: JpGraphEdge[] = [
-    // Orthographic: radicals contained in kanji
-    { source: 'r-1', target: 'k-1', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-2', target: 'k-1', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-1', target: 'k-6', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-2', target: 'k-7', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-3', target: 'k-2', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-3', target: 'k-3', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    { source: 'r-5', target: 'k-8', category: 'orthographic', relation: 'contains_component', weight: 1.0 },
-    // Semantic: related meanings
-    { source: 'k-4', target: 'k-5', category: 'semantic', relation: 'semantic_field', weight: 0.8 },
-    { source: 'k-2', target: 'k-3', category: 'semantic', relation: 'semantic_field', weight: 0.9 },
-    { source: 'k-6', target: 'k-7', category: 'semantic', relation: 'antonym', weight: 0.7 },
-    { source: 'r-4', target: 'r-5', category: 'semantic', relation: 'antonym', weight: 0.6 },
-    { source: 'r-3', target: 'k-4', category: 'semantic', relation: 'semantic_field', weight: 0.5 },
-    // Collocational: words containing kanji
-    { source: 'k-1', target: 'v-1', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-6', target: 'v-1', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-4', target: 'v-2', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-5', target: 'v-2', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-8', target: 'v-3', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-4', target: 'v-3', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-3', target: 'v-4', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-2', target: 'v-4', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    { source: 'k-1', target: 'v-5', category: 'collocational', relation: 'compound_word', weight: 1.0 },
-    // Grammatical: grammar using vocabulary
-    { source: 'g-1', target: 'v-3', category: 'grammatical', relation: 'grammar_example', weight: 0.6 },
-    { source: 'g-2', target: 'v-1', category: 'grammatical', relation: 'grammar_example', weight: 0.5 },
-  ]
-
-  return { nodes, edges }
-}
 
 // ── Constants ────────────────────────────────────────────────────────
 
 const NODE_TYPE_COLORS: Record<JpItemType, string> = {
   radical: '#3B82F6',     // blue
   kanji: '#C8A24A',       // gold
-  vocabulary: '#22C55E',  // green
+  word: '#22C55E',        // green
   grammar: '#A855F7',     // purple
 }
 
@@ -110,7 +44,7 @@ const MASTERY_OPACITY: Record<JpMasteryLevel, number> = {
 const NODE_TYPE_LABELS: Record<JpItemType, string> = {
   radical: 'Radical',
   kanji: 'Kanji',
-  vocabulary: 'Word',
+  word: 'Word',
   grammar: 'Grammar',
 }
 
@@ -218,12 +152,22 @@ interface AssociationGraphProps {
 export function AssociationGraph({ onNodeSelect, className }: AssociationGraphProps) {
   const {
     selectedNodeId,
+    selectedNodeType,
     setSelectedNode,
-    graphFilter,
-    setGraphFilter,
     graphDepth,
     setGraphDepth,
   } = useJapaneseStore()
+
+  const jp = useJapanese()
+
+  const [graphData, setGraphData] = useState<JpGraphData>({ nodes: [], edges: [] })
+  const [loading, setLoading] = useState(true)
+
+  // Local filter state for node types and edge categories
+  const [filterNodeTypes, setFilterNodeTypes] = useState<JpItemType[]>(['radical', 'kanji', 'word', 'grammar'])
+  const [filterEdgeCategories, setFilterEdgeCategories] = useState<JpAssociationCategory[]>([
+    'semantic', 'phonological', 'orthographic', 'collocational', 'grammatical', 'mnemonic',
+  ])
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -234,24 +178,68 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
   const panOffset = useRef({ x: 0, y: 0 })
   const svgRef = useRef<SVGSVGElement>(null)
 
-  const mockGraph = useMemo(() => buildMockGraph(), [])
+  // Load graph data when selectedNodeId or depth changes
+  useEffect(() => {
+    let cancelled = false
 
-  const centerId = selectedNodeId ?? 'k-1'
+    async function loadGraph() {
+      setLoading(true)
+      try {
+        let nodeId = selectedNodeId
+        let nodeType: JpItemType = selectedNodeType ?? 'kanji'
+
+        // If no selected node, try loading the first kanji from the DB
+        if (!nodeId) {
+          const kanjiList = await jp.getAllKanji()
+          if (kanjiList.length > 0) {
+            nodeId = kanjiList[0].id
+            nodeType = 'kanji'
+            setSelectedNode(nodeId, nodeType)
+          }
+        }
+
+        if (!nodeId) {
+          if (!cancelled) {
+            setGraphData({ nodes: [], edges: [] })
+            setLoading(false)
+          }
+          return
+        }
+
+        const data = await jp.getGraphData(nodeId, nodeType, graphDepth)
+        if (!cancelled) {
+          setGraphData(data)
+        }
+      } catch (err) {
+        console.error('[AssociationGraph] Failed to load graph:', err)
+        if (!cancelled) setGraphData({ nodes: [], edges: [] })
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadGraph()
+    return () => { cancelled = true }
+  }, [selectedNodeId, selectedNodeType, graphDepth, jp.getGraphData, jp.getAllKanji, setSelectedNode])
+
+  const centerId = selectedNodeId ?? graphData.nodes[0]?.id ?? ''
   const viewWidth = 800
   const viewHeight = 600
 
   const layout = useMemo(
     () =>
-      computeRadialLayout(
-        mockGraph,
-        centerId,
-        graphDepth,
-        graphFilter.nodeTypes,
-        graphFilter.edgeCategories,
-        viewWidth,
-        viewHeight,
-      ),
-    [mockGraph, centerId, graphDepth, graphFilter.nodeTypes, graphFilter.edgeCategories],
+      graphData.nodes.length > 0 && centerId
+        ? computeRadialLayout(
+            graphData,
+            centerId,
+            graphDepth,
+            filterNodeTypes,
+            filterEdgeCategories,
+            viewWidth,
+            viewHeight,
+          )
+        : { nodes: [] as LayoutNode[], edges: [] as JpGraphEdge[] },
+    [graphData, centerId, graphDepth, filterNodeTypes, filterEdgeCategories],
   )
 
   const handleNodeClick = useCallback(
@@ -265,7 +253,7 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
   const handleSearchJump = useCallback(() => {
     if (!searchQuery.trim()) return
     const q = searchQuery.trim().toLowerCase()
-    const found = mockGraph.nodes.find(
+    const found = graphData.nodes.find(
       (n) =>
         n.label.toLowerCase().includes(q) ||
         n.sublabel?.toLowerCase().includes(q) ||
@@ -276,32 +264,30 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
       onNodeSelect?.(found.id, found.type)
       setSearchQuery('')
     }
-  }, [searchQuery, mockGraph.nodes, setSelectedNode, onNodeSelect])
+  }, [searchQuery, graphData.nodes, setSelectedNode, onNodeSelect])
 
   const toggleNodeType = useCallback(
     (type: JpItemType) => {
-      const current = graphFilter.nodeTypes
-      const updated = current.includes(type)
-        ? current.filter((t) => t !== type)
-        : [...current, type]
-      if (updated.length > 0) {
-        setGraphFilter({ nodeTypes: updated })
-      }
+      setFilterNodeTypes((current) => {
+        const updated = current.includes(type)
+          ? current.filter((t) => t !== type)
+          : [...current, type]
+        return updated.length > 0 ? updated : current
+      })
     },
-    [graphFilter.nodeTypes, setGraphFilter],
+    [],
   )
 
   const toggleEdgeCategory = useCallback(
     (cat: JpAssociationCategory) => {
-      const current = graphFilter.edgeCategories
-      const updated = current.includes(cat)
-        ? current.filter((c) => c !== cat)
-        : [...current, cat]
-      if (updated.length > 0) {
-        setGraphFilter({ edgeCategories: updated })
-      }
+      setFilterEdgeCategories((current) => {
+        const updated = current.includes(cat)
+          ? current.filter((c) => c !== cat)
+          : [...current, cat]
+        return updated.length > 0 ? updated : current
+      })
     },
-    [graphFilter.edgeCategories, setGraphFilter],
+    [],
   )
 
   const resetView = useCallback(() => {
@@ -353,6 +339,30 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
   )
 
   const hoveredNode = layout.nodes.find((n) => n.id === hoveredNodeId)
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={cn('flex items-center justify-center h-full bg-obsidian', className)}>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-warm-gray" />
+          <p className="text-sm text-warm-gray">Loading association graph...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Empty state
+  if (graphData.nodes.length === 0) {
+    return (
+      <div className={cn('flex items-center justify-center h-full bg-obsidian', className)}>
+        <div className="text-center">
+          <p className="text-sm text-warm-gray mb-2">No graph data available</p>
+          <p className="text-xs text-warm-gray/60">Add some kanji, vocabulary, or radicals to see the association web</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex flex-col h-full bg-obsidian', className)}>
@@ -409,14 +419,14 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
               onClick={() => toggleNodeType(type)}
               className={cn(
                 'flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-all',
-                graphFilter.nodeTypes.includes(type)
+                filterNodeTypes.includes(type)
                   ? 'bg-charcoal-slate text-parchment'
                   : 'text-warm-gray/50 line-through',
               )}
             >
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: NODE_TYPE_COLORS[type], opacity: graphFilter.nodeTypes.includes(type) ? 1 : 0.3 }}
+                style={{ backgroundColor: NODE_TYPE_COLORS[type], opacity: filterNodeTypes.includes(type) ? 1 : 0.3 }}
               />
               {NODE_TYPE_LABELS[type]}
             </button>
@@ -431,14 +441,14 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
               onClick={() => toggleEdgeCategory(cat)}
               className={cn(
                 'flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-all',
-                graphFilter.edgeCategories.includes(cat)
+                filterEdgeCategories.includes(cat)
                   ? 'bg-charcoal-slate text-parchment'
                   : 'text-warm-gray/50 line-through',
               )}
             >
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: EDGE_CATEGORY_COLORS[cat], opacity: graphFilter.edgeCategories.includes(cat) ? 1 : 0.3 }}
+                style={{ backgroundColor: EDGE_CATEGORY_COLORS[cat], opacity: filterEdgeCategories.includes(cat) ? 1 : 0.3 }}
               />
               {CATEGORY_LABELS[cat]}
             </button>
