@@ -324,3 +324,282 @@ export interface CreateLink {
   relationship: RelationshipType
   reason?: string
 }
+
+// ---- Peak Learning types ----
+
+export type LessonStatus = 'draft' | 'published'
+
+export interface LearningPath {
+  id: string
+  title: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface LearningModule {
+  id: string
+  path_id: string
+  title: string
+  description?: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Lesson {
+  id: string
+  module_id: string
+  title: string
+  subtitle?: string
+  content: string
+  sort_order: number
+  status: LessonStatus
+  estimated_minutes?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface LessonTerm {
+  id: string
+  lesson_id: string
+  term: string
+  definition: string
+  concept_id?: string
+}
+
+export interface LessonProgress {
+  lesson_id: string
+  completed: boolean
+  completed_at?: string
+  scroll_position: number
+  updated_at: string
+}
+
+// ---- Japanese Language Learning types ----
+
+export type JpMasteryLevel = 'unknown' | 'seen' | 'learning' | 'known' | 'mastered'
+export type JpItemType = 'radical' | 'kanji' | 'word' | 'grammar'
+export type JpCardType = 'meaning' | 'reading' | 'recall' | 'listening'
+export type JpSrsState = 0 | 1 | 2 | 3 // New, Learning, Review, Relearning
+export type JpAssociationCategory = 'semantic' | 'phonological' | 'orthographic' | 'collocational' | 'grammatical' | 'mnemonic'
+
+export type JpAssociationRelation =
+  // Semantic
+  | 'SYNONYM' | 'ANTONYM' | 'HYPERNYM' | 'HYPONYM' | 'CO_HYPONYM'
+  | 'MERONYM' | 'HOLONYM' | 'THEMATIC' | 'REGISTER_PAIR'
+  // Phonological
+  | 'HOMOPHONE' | 'MINIMAL_PAIR' | 'PITCH_ACCENT_PAIR' | 'SHARED_READING'
+  // Orthographic
+  | 'SHARED_RADICAL' | 'SHARED_PHONETIC' | 'CONTAINS_COMPONENT' | 'VISUALLY_SIMILAR'
+  // Collocational
+  | 'VERB_OBJECT' | 'ADJ_NOUN' | 'COMPOUND_WORD' | 'COLLOCATES_WITH'
+  // Grammatical
+  | 'SAME_CONJUGATION' | 'SAME_PARTICLE' | 'TRANSITIVE_INTRANSITIVE'
+  | 'SAME_GRAMMAR_PATTERN' | 'USES_GRAMMAR'
+  // Mnemonic
+  | 'MNEMONIC_LINK' | 'STORY_CHAIN'
+
+export interface JpRadical {
+  id: string
+  character: string
+  meaning: string
+  alt_meanings?: string[]
+  stroke_count: number
+  mnemonic?: string
+  frequency_rank?: number
+  position_hint?: string
+  created_at: string
+}
+
+export interface JpKanji {
+  id: string
+  character: string
+  meanings: string[]
+  on_readings?: string[]
+  kun_readings?: string[]
+  stroke_count: number
+  jlpt_level?: number
+  grade?: number
+  frequency_rank?: number
+  mnemonic_meaning?: string
+  mnemonic_reading?: string
+  phonetic_component?: string
+  semantic_component?: string
+  sort_order?: number
+  created_at: string
+  // Populated by queries
+  components?: (JpRadical | JpKanji)[]
+  vocabulary?: JpVocabulary[]
+}
+
+export interface JpVocabulary {
+  id: string
+  word: string
+  reading: string
+  meanings: string[]
+  part_of_speech?: string
+  jlpt_level?: number
+  frequency_rank?: number
+  pitch_accent?: string
+  conjugation_class?: string
+  notes?: string
+  sort_order?: number
+  created_at: string
+  // Populated by queries
+  kanji?: JpKanji[]
+  sentences?: JpSentence[]
+}
+
+export interface JpGrammar {
+  id: string
+  pattern: string
+  meaning: string
+  formation?: string
+  jlpt_level?: number
+  examples?: { jp: string; en: string; notes?: string }[]
+  related_grammar?: string[]
+  notes?: string
+  sort_order?: number
+  created_at: string
+}
+
+export interface JpSentence {
+  id: string
+  japanese: string
+  english?: string
+  tokens?: { surface: string; lemma: string; reading: string; pos: string }[]
+  difficulty_score?: number
+  source?: string
+  created_at: string
+}
+
+export interface JpAssociation {
+  id: string
+  source_id: string
+  source_type: JpItemType | 'sentence'
+  target_id: string
+  target_type: JpItemType | 'sentence'
+  category: JpAssociationCategory
+  relation: JpAssociationRelation
+  weight: number
+  bidirectional: boolean
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
+export interface JpSrsCard {
+  id: string
+  item_id: string
+  item_type: JpItemType
+  card_type: JpCardType
+  // FSRS state
+  stability: number
+  difficulty: number
+  elapsed_days: number
+  scheduled_days: number
+  reps: number
+  lapses: number
+  state: JpSrsState
+  due: string
+  last_review?: string
+  implicit_boost: number
+  created_at: string
+}
+
+export interface JpReviewLog {
+  id: string
+  card_id: string
+  rating: 1 | 2 | 3 | 4
+  state: JpSrsState
+  elapsed_days: number
+  scheduled_days: number
+  reviewed_at: string
+  duration_ms?: number
+}
+
+export interface JpKnownWord {
+  lemma: string
+  reading?: string
+  mastery_level: JpMasteryLevel
+  encounter_count: number
+  first_seen: string
+  last_encountered: string
+  source?: string
+}
+
+export interface JpGhost {
+  id: string
+  card_id: string
+  fail_count: number
+  ghost_interval: number
+  ghost_due: string
+  created_at: string
+}
+
+export interface JpProgress {
+  dimension: 'vocabulary' | 'kanji' | 'grammar' | 'reading' | 'listening'
+  current_level: number
+  items_total: number
+  items_learning: number
+  items_known: number
+  items_mastered: number
+  daily_streak: number
+  last_study_date?: string
+  updated_at: string
+}
+
+export interface JpStudySession {
+  id: string
+  session_date: string
+  duration_minutes: number
+  cards_reviewed: number
+  cards_new: number
+  accuracy: number
+  created_at: string
+}
+
+// Association web graph types for visualization
+export interface JpGraphNode {
+  id: string
+  type: JpItemType
+  label: string
+  sublabel?: string
+  mastery: JpMasteryLevel
+  jlpt_level?: number
+  data?: JpRadical | JpKanji | JpVocabulary | JpGrammar
+}
+
+export interface JpGraphEdge {
+  source: string
+  target: string
+  category: JpAssociationCategory
+  relation: JpAssociationRelation
+  weight: number
+}
+
+export interface JpGraphData {
+  nodes: JpGraphNode[]
+  edges: JpGraphEdge[]
+}
+
+// Review session state
+export interface JpReviewSession {
+  cards: JpSrsCard[]
+  currentIndex: number
+  answers: { card_id: string; rating: 1 | 2 | 3 | 4; duration_ms: number }[]
+  startedAt: string
+  sessionType: 'due' | 'new' | 'ghost' | 'mixed'
+}
+
+// Dashboard stats
+export interface JpDashboardStats {
+  dueCards: number
+  newCardsAvailable: number
+  ghostCount: number
+  todayReviewed: number
+  todayAccuracy: number
+  currentStreak: number
+  totalKnownWords: number
+  progress: JpProgress[]
+}
