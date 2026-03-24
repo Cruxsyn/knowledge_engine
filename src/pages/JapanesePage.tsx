@@ -46,7 +46,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'explore', label: 'Explore', icon: Compass },
-  { id: 'forge', label: 'Forge', icon: Hammer },
+  { id: 'forge', label: 'Compose', icon: Hammer },
   { id: 'discover', label: 'Discover', icon: Lightbulb },
   { id: 'read', label: 'Read', icon: BookText },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

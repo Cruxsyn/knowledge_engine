@@ -526,10 +526,10 @@ export function KanjiForge() {
         {/* Header */}
         <div>
           <h2 className="text-lg font-semibold text-parchment">
-            Kanji Forge
+            Compose
           </h2>
           <p className="text-xs text-warm-gray/60 mt-0.5">
-            Build kanji from their components
+            Assemble kanji from their components
           </p>
         </div>
 
@@ -591,7 +591,7 @@ export function KanjiForge() {
               <div className="flex items-center gap-3 min-h-[120px]">
                 {slots.length === 0 && (
                   <p className="text-warm-gray/60 text-sm italic">
-                    Select components from the palette above to begin forging...
+                    Select components from the palette above
                   </p>
                 )}
                 {slots.map((char, idx) => {
@@ -830,7 +830,7 @@ export function KanjiForge() {
 
               {forgedKanji.size === 0 && (
                 <p className="text-sm text-warm-gray/60 mb-4">
-                  No kanji forged yet. Start combining components!
+                  No kanji composed yet. Start combining components.
                 </p>
               )}
 
@@ -857,7 +857,7 @@ export function KanjiForge() {
               {forgedKanji.size === FORGE_RECIPES.length && (
                 <div className="text-center py-4">
                   <p className="text-sm text-verdigris font-medium">
-                    All kanji forged! You are a true smith of characters.
+                    All compositions discovered.
                   </p>
                 </div>
               )}
