@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
-import { Volume2, VolumeX, Loader2 } from 'lucide-react'
+import { Volume2, VolumeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { speakJapanese, stopAudio } from '@/lib/japanese/audio'
+import { speakJapanese, stopAudio, isJapaneseVoiceAvailable } from '@/lib/japanese/audio'
 
 interface SpeakButtonProps {
   text: string
@@ -13,6 +13,7 @@ interface SpeakButtonProps {
 
 export function SpeakButton({ text, rate = 0.9, size = 'md', className, label }: SpeakButtonProps) {
   const [playing, setPlaying] = useState(false)
+  const available = isJapaneseVoiceAvailable()
 
   const handleClick = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -25,12 +26,13 @@ export function SpeakButton({ text, rate = 0.9, size = 'md', className, label }:
     }
 
     setPlaying(true)
-    try {
-      await speakJapanese(text, rate)
-    } finally {
-      // Reset after estimated duration (TTS doesn't give us an end event for Edge TTS)
-      setTimeout(() => setPlaying(false), Math.max(1000, text.length * 300))
+    const ok = await speakJapanese(text, rate)
+    if (!ok) {
+      setPlaying(false)
+      return
     }
+    // Reset after estimated duration
+    setTimeout(() => setPlaying(false), Math.max(800, text.length * 250))
   }, [text, rate, playing])
 
   const sizeClasses = {
@@ -43,6 +45,24 @@ export function SpeakButton({ text, rate = 0.9, size = 'md', className, label }:
     sm: 'h-3 w-3',
     md: 'h-4 w-4',
     lg: 'h-5 w-5',
+  }
+
+  if (!available) {
+    return (
+      <button
+        className={cn(
+          'inline-flex items-center justify-center rounded-full',
+          'text-warm-gray/20 cursor-not-allowed',
+          sizeClasses[size],
+          className
+        )}
+        title="No Japanese voice installed. Windows: Settings → Time & Language → Speech → Add voices → Japanese"
+        aria-label="Audio unavailable"
+        disabled
+      >
+        <VolumeOff className={iconSize[size]} />
+      </button>
+    )
   }
 
   return (
@@ -59,17 +79,13 @@ export function SpeakButton({ text, rate = 0.9, size = 'md', className, label }:
       title={label || `Play: ${text}`}
       aria-label={label || `Play pronunciation: ${text}`}
     >
-      {playing ? (
-        <Loader2 className={cn(iconSize[size], 'animate-spin')} />
-      ) : (
-        <Volume2 className={iconSize[size]} />
-      )}
+      <Volume2 className={iconSize[size]} />
     </button>
   )
 }
 
 /**
- * Inline speak button that sits next to text — smaller, more subtle.
+ * Inline speak button — smaller, more subtle.
  */
 export function InlineSpeakButton({ text, rate = 0.9, className }: { text: string; rate?: number; className?: string }) {
   return (
