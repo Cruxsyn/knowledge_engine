@@ -11,9 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  Flame,
   Trash2,
-  Sparkles,
   ExternalLink,
   Lightbulb,
   Check,
@@ -524,25 +522,21 @@ export function KanjiForge() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col gap-6 p-6 animate-page-in">
+      <div className="flex flex-col gap-4 p-4 animate-page-in">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <Flame className="h-6 w-6 text-icon-gold" />
-          <div>
-            <h2 className="text-2xl font-serif font-semibold text-parchment">
-              Kanji Forge
-            </h2>
-            <p className="text-sm text-warm-gray">
-              Build kanji from their components
-            </p>
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-parchment">
+            Kanji Forge
+          </h2>
+          <p className="text-xs text-warm-gray/60 mt-0.5">
+            Build kanji from their components
+          </p>
         </div>
 
         {/* Component Palette */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-parchment flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-icon-gold" />
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">
               Component Palette
             </CardTitle>
           </CardHeader>
@@ -556,11 +550,10 @@ export function KanjiForge() {
                       disabled={slots.length >= MAX_SLOTS}
                       className={cn(
                         'flex flex-col items-center justify-center',
-                        'w-14 h-16 rounded-lg',
-                        'bg-charcoal-slate border border-ash-stone/30',
+                        'w-12 h-14 rounded',
+                        'bg-charcoal-slate border border-ash-stone/20',
                         'transition-all duration-200',
-                        'hover:border-icon-gold/60 hover:bg-ash-stone/40',
-                        'hover:shadow-[0_0_12px_rgba(200,162,74,0.15)]',
+                        'hover:border-ash-stone/50 hover:bg-ash-stone/40',
                         'active:scale-95',
                         'disabled:opacity-40 disabled:cursor-not-allowed',
                         'focus-ring',
@@ -588,8 +581,7 @@ export function KanjiForge() {
         {/* Forge Area */}
         <Card className="relative overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-parchment flex items-center gap-2">
-              <Flame className="h-4 w-4 text-oxide-red" />
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">
               Forge Area
             </CardTitle>
           </CardHeader>
@@ -617,11 +609,10 @@ export function KanjiForge() {
                         onClick={() => removeSlot(idx)}
                         className={cn(
                           'relative flex flex-col items-center justify-center',
-                          'w-20 h-24 rounded-xl',
-                          'bg-charcoal-slate border-2 border-icon-gold',
-                          'shadow-[0_0_16px_rgba(200,162,74,0.2)]',
+                          'w-20 h-24 rounded-lg',
+                          'bg-charcoal-slate border border-ash-stone/40',
                           'transition-all duration-200',
-                          'hover:border-oxide-red hover:shadow-[0_0_16px_rgba(139,44,44,0.3)]',
+                          'hover:border-oxide-red/60',
                           'group',
                         )}
                         title="Click to remove"
@@ -671,7 +662,7 @@ export function KanjiForge() {
                   Clear
                 </Button>
                 <Button
-                  variant="gold"
+                  variant="default"
                   size="sm"
                   onClick={forge}
                   disabled={slots.length < 2 || isForging}
@@ -680,8 +671,7 @@ export function KanjiForge() {
                     isForging && 'animate-pulse',
                   )}
                 >
-                  <Flame className="w-3.5 h-3.5" />
-                  {isForging ? 'Forging...' : 'Forge!'}
+                  {isForging ? 'Building...' : 'Build'}
                 </Button>
               </div>
             </div>
@@ -707,7 +697,7 @@ export function KanjiForge() {
         {forgeResult && (
           <Card
             className={cn(
-              'border-icon-gold/40 overflow-hidden',
+              'border-ash-stone/20 overflow-hidden',
               showResult && 'forge-result-enter',
             )}
           >
@@ -731,7 +721,7 @@ export function KanjiForge() {
                     </span>
                     <SpeakButton text={forgeResult.character} />
                   </div>
-                  <p className="text-lg text-parchment mt-3 font-serif">
+                  <p className="text-lg text-parchment mt-3">
                     {forgeResult.meaning}
                   </p>
                   <p className="text-sm text-warm-gray mt-1">
@@ -791,8 +781,7 @@ export function KanjiForge() {
               onClick={() => setDiscoveriesExpanded((v) => !v)}
               className="flex items-center justify-between w-full"
             >
-              <CardTitle className="text-base text-parchment flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-verdigris" />
+              <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70 flex items-center gap-2">
                 Discoveries
                 <Badge variant="secondary" className="ml-2 text-xs">
                   {forgedKanji.size} / {FORGE_RECIPES.length}

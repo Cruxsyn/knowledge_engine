@@ -21,7 +21,6 @@ import {
   BookText,
   LayoutDashboard,
   Settings,
-  Construction,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -29,9 +28,8 @@ import {
 
 function PlaceholderTab({ name, description }: { name: string; description?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <Construction className="h-12 w-12 text-warm-gray/40" />
-      <h3 className="text-xl font-serif text-parchment">{name}</h3>
+    <div className="flex flex-col items-center justify-center h-full gap-3">
+      <h3 className="text-base text-parchment">{name}</h3>
       {description && <p className="text-warm-gray text-sm max-w-md text-center">{description}</p>}
       <p className="text-warm-gray/50 text-xs">Coming soon</p>
     </div>
@@ -150,9 +148,9 @@ export function JapanesePage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header + Tab bar */}
-      <div className="border-b border-ash-stone/30 bg-charcoal-slate/50">
+      <div className="border-b border-ash-stone/20 bg-charcoal-slate/50">
         <div className="flex items-center justify-between px-6 pt-4 pb-0">
-          <h1 className="text-2xl font-serif font-semibold text-parchment">
+          <h1 className="text-xl font-semibold text-parchment">
             Japanese
           </h1>
         </div>
@@ -167,14 +165,14 @@ export function JapanesePage() {
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
                   'border-b-2 -mb-px whitespace-nowrap',
                   isActive
                     ? 'border-icon-gold text-parchment'
                     : 'border-transparent text-warm-gray hover:text-parchment hover:border-warm-gray/30'
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {tab.label}
               </button>
             )

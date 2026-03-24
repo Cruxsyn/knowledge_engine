@@ -367,7 +367,7 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
   return (
     <div className={cn('flex flex-col h-full bg-obsidian', className)}>
       {/* Controls bar */}
-      <div className="flex-shrink-0 p-3 border-b border-ash-stone/50 space-y-3">
+      <div className="flex-shrink-0 p-2 border-b border-ash-stone/20 space-y-2">
         {/* Top row: search + zoom */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-xs">
@@ -395,7 +395,7 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
               </Button>
             ))}
 
-            <div className="w-px h-5 bg-ash-stone/50 mx-1" />
+            <div className="w-px h-4 bg-ash-stone/20 mx-1" />
 
             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(3, z * 1.2))}>
               <ZoomIn className="h-3.5 w-3.5" />
@@ -411,39 +411,37 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
         </div>
 
         {/* Filter row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-warm-gray">Nodes:</span>
+        <div className="flex flex-wrap items-center gap-1 text-[10px]">
           {(Object.keys(NODE_TYPE_LABELS) as JpItemType[]).map((type) => (
             <button
               key={type}
               onClick={() => toggleNodeType(type)}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-all',
+                'flex items-center gap-1 px-1.5 py-0.5 rounded transition-all',
                 filterNodeTypes.includes(type)
-                  ? 'bg-charcoal-slate text-parchment'
-                  : 'text-warm-gray/50 line-through',
+                  ? 'text-warm-gray'
+                  : 'text-warm-gray/30 line-through',
               )}
             >
               <span
-                className="w-2 h-2 rounded-full"
+                className="w-1.5 h-1.5 rounded-full"
                 style={{ backgroundColor: NODE_TYPE_COLORS[type], opacity: filterNodeTypes.includes(type) ? 1 : 0.3 }}
               />
               {NODE_TYPE_LABELS[type]}
             </button>
           ))}
 
-          <div className="w-px h-4 bg-ash-stone/50 mx-1" />
+          <div className="w-px h-3 bg-ash-stone/20 mx-0.5" />
 
-          <span className="text-xs text-warm-gray">Edges:</span>
           {(Object.keys(CATEGORY_LABELS) as JpAssociationCategory[]).map((cat) => (
             <button
               key={cat}
               onClick={() => toggleEdgeCategory(cat)}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-all',
+                'flex items-center gap-1 px-1.5 py-0.5 rounded transition-all',
                 filterEdgeCategories.includes(cat)
-                  ? 'bg-charcoal-slate text-parchment'
-                  : 'text-warm-gray/50 line-through',
+                  ? 'text-warm-gray'
+                  : 'text-warm-gray/30 line-through',
               )}
             >
               <span
@@ -515,7 +513,7 @@ export function AssociationGraph({ onNodeSelect, className }: AssociationGraphPr
               const isCenter = node.ring === 0
               const isHovered = hoveredNodeId === node.id
               const isSelected = selectedNodeId === node.id
-              const baseSize = isCenter ? 32 : node.ring === 1 ? 22 : 16
+              const baseSize = isCenter ? 28 : node.ring === 1 ? 19 : 14
               const size = baseSize * (isHovered ? 1.15 : 1)
               const opacity = MASTERY_OPACITY[node.mastery]
               const color = NODE_TYPE_COLORS[node.type]

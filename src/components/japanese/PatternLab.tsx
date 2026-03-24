@@ -936,8 +936,8 @@ function ExampleSentence({
   const parts = example.japanese.split(example.highlight)
 
   return (
-    <div className="py-3 px-4 rounded-lg bg-ash-stone/40 border border-ash-stone/30">
-      <div className="text-xl text-parchment font-serif tracking-wide inline-flex items-center flex-wrap">
+    <div className="py-2 px-3 rounded bg-ash-stone/40 border border-ash-stone/20">
+      <div className="text-xl text-parchment tracking-wide inline-flex items-center flex-wrap">
         {parts.map((part, i) => (
           <span key={i}>
             <span>{part}</span>
@@ -974,7 +974,7 @@ function ProgressBar({
           {current}/{total} discovered
         </span>
       </div>
-      <div className="h-2 bg-ash-stone/60 rounded-full overflow-hidden">
+      <div className="h-1 bg-ash-stone/60 rounded-full overflow-hidden">
         <div
           className="h-full bg-icon-gold/80 rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
@@ -1184,13 +1184,13 @@ export default function PatternLab() {
   const allCategories = Object.keys(CATEGORY_META) as PatternCategory[]
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-page-in">
+    <div className="max-w-3xl mx-auto space-y-4 p-4 animate-page-in">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-serif font-semibold text-parchment">
+        <h2 className="text-lg font-semibold text-parchment">
           Pattern Lab
         </h2>
-        <p className="text-warm-gray text-sm mt-1">
+        <p className="text-xs text-warm-gray/60 mt-0.5">
           Observe. Discover. Understand.
         </p>
       </div>
@@ -1198,7 +1198,7 @@ export default function PatternLab() {
       {/* Category selector */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-warm-gray">
+          <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">
             Pattern Categories
           </CardTitle>
         </CardHeader>
@@ -1215,16 +1215,15 @@ export default function PatternLab() {
                   key={cat}
                   onClick={() => handleSelectCategory(cat)}
                   className={cn(
-                    'px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
-                    'flex items-center gap-2',
+                    'px-3 py-1.5 rounded text-xs font-medium transition-all duration-200 border',
+                    'flex items-center gap-1.5',
                     isActive
-                      ? 'bg-icon-gold/15 border-icon-gold/50 text-icon-gold'
+                      ? 'border-parchment/40 text-parchment underline underline-offset-4'
                       : isComplete
-                        ? 'bg-patina-teal/10 border-patina-teal/30 text-patina-teal'
-                        : 'bg-ash-stone/30 border-ash-stone/40 text-warm-gray hover:border-parchment/30 hover:text-parchment',
+                        ? 'border-ash-stone/20 text-patina-teal'
+                        : 'border-ash-stone/20 text-warm-gray hover:text-parchment',
                   )}
                 >
-                  <span>{meta.icon}</span>
                   <span>{meta.label}</span>
                   {done > 0 && (
                     <Badge
@@ -1390,24 +1389,17 @@ export default function PatternLab() {
 
       {/* Prompt when no category selected */}
       {!activeCategory && (
-        <Card className="border-ash-stone/30 bg-ash-stone/10">
-          <CardContent className="py-12 text-center">
-            <p className="text-warm-gray text-lg">
-              Select a category above to begin discovering patterns.
-            </p>
-            <p className="text-warm-gray/60 text-sm mt-2">
-              Each challenge shows you examples and asks what pattern you
-              observe. Rules you discover yourself stick 30-50% better than rules
-              you are told.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="border-b border-ash-stone/20 pb-4">
+          <p className="text-sm text-warm-gray/60">
+            Select a category to begin. Rules you discover yourself stick 30-50% better than rules you are told.
+          </p>
+        </div>
       )}
 
       {/* Discovery progress */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-warm-gray">
+          <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">
             Discovery Progress
           </CardTitle>
         </CardHeader>

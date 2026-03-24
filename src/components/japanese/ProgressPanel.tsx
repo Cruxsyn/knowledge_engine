@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  BarChart3,
-  Flame,
   BookOpen,
   Languages,
   Brain,
@@ -68,12 +66,12 @@ function StatCard({ icon: Icon, label, value, sub }: {
   sub?: string
 }) {
   return (
-    <div className="bg-charcoal-slate/50 border border-ash-stone/30 rounded-lg p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className="h-4 w-4 text-icon-gold/70" />
+    <div className="border-b border-ash-stone/20 pb-3">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className="h-3.5 w-3.5 text-warm-gray/50" />
         <span className="text-xs text-warm-gray">{label}</span>
       </div>
-      <div className="text-2xl font-semibold text-parchment tabular-nums">{value}</div>
+      <div className="text-sm font-mono font-semibold text-parchment">{value}</div>
       {sub && <div className="text-xs text-warm-gray/60 mt-0.5">{sub}</div>}
     </div>
   )
@@ -83,9 +81,8 @@ function StatCard({ icon: Icon, label, value, sub }: {
 
 function JlptProgressSection({ jlptData }: { jlptData: JlptLevelProgress[] }) {
   return (
-    <div className="bg-charcoal-slate/50 border border-ash-stone/30 rounded-lg p-6">
-      <h3 className="font-serif text-lg text-parchment mb-4 flex items-center gap-2">
-        <Languages className="h-5 w-5 text-icon-gold" />
+    <div className="bg-charcoal-slate/50 border border-ash-stone/20 rounded-lg p-4">
+      <h3 className="text-xs uppercase tracking-widest text-warm-gray/70 mb-3">
         JLPT Level Progress
       </h3>
 
@@ -186,16 +183,12 @@ function StudyCalendar({ heatData, streak }: { heatData: HeatMapDay[]; streak: n
   const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 
   return (
-    <div className="bg-charcoal-slate/50 border border-ash-stone/30 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-serif text-lg text-parchment flex items-center gap-2">
-          <Flame className="h-5 w-5 text-icon-gold" />
+    <div className="bg-charcoal-slate/50 border border-ash-stone/20 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs uppercase tracking-widest text-warm-gray/70">
           Study Calendar
         </h3>
-        <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4 text-icon-gold" />
-          <span className="text-sm text-parchment font-medium">{streak} day streak</span>
-        </div>
+        <span className="text-xs font-mono text-warm-gray">{streak} day streak</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -304,9 +297,8 @@ function RadarChart({ dimensions }: { dimensions: DimensionScore[] }) {
   const labelPoints = dimensions.map((_, i) => getPoint(i, maxRadius + 24))
 
   return (
-    <div className="bg-charcoal-slate/50 border border-ash-stone/30 rounded-lg p-6">
-      <h3 className="font-serif text-lg text-parchment mb-4 flex items-center gap-2">
-        <Brain className="h-5 w-5 text-icon-gold" />
+    <div className="bg-charcoal-slate/50 border border-ash-stone/20 rounded-lg p-4">
+      <h3 className="text-xs uppercase tracking-widest text-warm-gray/70 mb-3">
         Skill Dimensions
       </h3>
 
@@ -538,11 +530,10 @@ export function ProgressPanel() {
   }, [stats])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <BarChart3 className="h-5 w-5 text-icon-gold" />
-        <h2 className="font-serif text-xl text-parchment">Progress Tracking</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-parchment">Progress Tracking</h2>
       </div>
 
       {/* Stats Cards */}
@@ -550,7 +541,7 @@ export function ProgressPanel() {
         <StatCard icon={BookOpen} label="Words Known" value={stats.totalWordsKnown.toLocaleString()} />
         <StatCard icon={Languages} label="Kanji Known" value={stats.totalKanjiKnown} />
         <StatCard icon={Brain} label="Grammar" value={stats.totalGrammarPatterns} />
-        <StatCard icon={Flame} label="Current Streak" value={`${stats.currentStreak} days`} />
+        <StatCard icon={Clock} label="Current Streak" value={`${stats.currentStreak} days`} />
         <StatCard icon={Trophy} label="Longest Streak" value={`${stats.longestStreak} days`} />
         <StatCard icon={Clock} label="Total Study" value={`${stats.totalStudyHours}h`} />
         <StatCard icon={Target} label="Avg. Accuracy" value={`${stats.averageAccuracy}%`} />
@@ -566,7 +557,7 @@ export function ProgressPanel() {
       <StudyCalendar heatData={heatData} streak={stats.currentStreak} />
 
       {/* JLPT Progress + Radar side by side on larger screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <JlptProgressSection jlptData={jlptData} />
         <RadarChart dimensions={dimensions} />
       </div>

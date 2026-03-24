@@ -149,7 +149,7 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
   return (
     <div className={cn('flex flex-col h-full bg-obsidian', className)}>
       {/* Filters bar */}
-      <div className="flex-shrink-0 p-3 border-b border-ash-stone/50 space-y-3">
+      <div className="flex-shrink-0 p-3 border-b border-ash-stone/20 space-y-3">
         {/* JLPT filter + view toggle */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
@@ -159,7 +159,7 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
                 key={level}
                 variant={kanjiJlptFilter === level ? 'default' : 'outline'}
                 size="sm"
-                className="h-7 px-2.5 text-xs"
+                className="h-6 px-2 text-xs rounded-full"
                 onClick={() => setKanjiJlptFilter(kanjiJlptFilter === level ? null : level)}
               >
                 N{level}
@@ -168,7 +168,7 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
             <Button
               variant={kanjiJlptFilter === null ? 'default' : 'outline'}
               size="sm"
-              className="h-7 px-2.5 text-xs"
+              className="h-6 px-2 text-xs rounded-full"
               onClick={() => setKanjiJlptFilter(null)}
             >
               All
@@ -214,7 +214,7 @@ export function KanjiBrowser({ onKanjiSelect, onViewInGraph, className }: KanjiB
               className="pl-8 h-8 text-xs bg-charcoal-slate"
             />
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-warm-gray whitespace-nowrap">
+          <div className="flex items-center gap-2 font-mono text-xs text-warm-gray whitespace-nowrap">
             <span>{stats.total} kanji</span>
             <span className="text-icon-gold">{stats.mastered} mastered</span>
             <span className="text-verdigris">{stats.known} known</span>
@@ -276,10 +276,10 @@ function GridView({
             onClick={() => onSelect(entry)}
             onDoubleClick={() => onViewInGraph?.(entry.kanji.id)}
             className={cn(
-              'flex flex-col items-center p-3 rounded-lg border transition-all cursor-pointer text-center',
+              'flex flex-col items-center p-2.5 rounded border transition-all cursor-pointer text-center',
               isSelected
-                ? 'bg-charcoal-slate border-icon-gold/40 shadow-[0_0_12px_rgba(200,162,74,0.1)]'
-                : 'bg-charcoal-slate/50 border-ash-stone/30 hover:border-ash-stone/60 hover:bg-charcoal-slate',
+                ? 'bg-charcoal-slate border-icon-gold/30'
+                : 'bg-charcoal-slate/50 border-ash-stone/20 hover:border-ash-stone/40 hover:bg-charcoal-slate',
             )}
           >
             {/* Character */}
@@ -477,7 +477,7 @@ function ComponentsView({
         // A more precise mapping would require batch-loading component relationships
 
         return (
-          <div key={radical.id} className="border border-ash-stone/30 rounded-lg p-3">
+          <div key={radical.id} className="border border-ash-stone/20 rounded p-3">
             {/* Radical header */}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl" style={{ fontFamily: 'system-ui, sans-serif' }}>

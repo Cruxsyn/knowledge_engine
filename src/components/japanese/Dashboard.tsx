@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { BookOpen, Sparkles, Globe, Flame } from 'lucide-react'
+import { BookOpen, Sparkles, Globe } from 'lucide-react'
 import type { DashboardStats } from '@/stores/japaneseStore'
 
 // --- Sub-components ---
@@ -234,7 +234,7 @@ function JLPTProgress({ progress }: JLPTProgressProps) {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <span className="text-xs text-warm-gray/70 w-9 text-right">{pct}%</span>
+            <span className="text-xs font-mono text-warm-gray/70 w-9 text-right">{pct}%</span>
           </div>
         )
       })}
@@ -258,20 +258,20 @@ export function Dashboard({ stats }: DashboardProps) {
         {/* Today's Study */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-parchment">Today's Study</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">Today's Study</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-warm-gray">Reviews due</span>
-              <span className="text-lg font-semibold text-icon-gold">{stats.reviewsDue}</span>
+              <span className="text-sm font-mono text-icon-gold">{stats.reviewsDue}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-warm-gray">New available</span>
-              <span className="text-lg font-semibold text-parchment">{stats.newAvailable}</span>
+              <span className="text-sm font-mono text-parchment">{stats.newAvailable}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-warm-gray">Ghosts</span>
-              <span className="text-lg font-semibold text-oxide-red">{stats.ghosts}</span>
+              <span className="text-sm font-mono text-oxide-red">{stats.ghosts}</span>
             </div>
           </CardContent>
         </Card>
@@ -279,16 +279,16 @@ export function Dashboard({ stats }: DashboardProps) {
         {/* Current Streak */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-parchment">Current Streak</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">Current Streak</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-3 mb-3">
-              <Flame className="h-8 w-8 text-icon-gold" />
-              <span className="text-3xl font-bold text-parchment">{stats.streakDays} days</span>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-warm-gray">Streak</span>
+              <span className="text-sm font-mono text-parchment">{stats.streakDays} days</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-warm-gray">Total known items</span>
-              <span className="text-lg font-semibold text-verdigris">{stats.totalKnown}</span>
+              <span className="text-sm font-mono text-verdigris">{stats.totalKnown}</span>
             </div>
           </CardContent>
         </Card>
@@ -299,7 +299,7 @@ export function Dashboard({ stats }: DashboardProps) {
         {/* Progress Radar */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-parchment">Progress Radar</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">Progress Radar</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-center py-2">
             <RadarChart data={stats.progress} />
@@ -309,7 +309,7 @@ export function Dashboard({ stats }: DashboardProps) {
         {/* Study Heat Map */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-parchment">Study Activity</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">Study Activity</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-center overflow-x-auto py-2">
             <HeatMap data={stats.heatMap} />
@@ -320,7 +320,7 @@ export function Dashboard({ stats }: DashboardProps) {
       {/* JLPT Progress */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-parchment">JLPT Progress</CardTitle>
+          <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">JLPT Progress</CardTitle>
         </CardHeader>
         <CardContent>
           <JLPTProgress progress={stats.jlptProgress} />
@@ -330,13 +330,13 @@ export function Dashboard({ stats }: DashboardProps) {
       {/* Quick Actions */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-parchment">Quick Actions</CardTitle>
+          <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button
               variant="gold"
-              size="lg"
+              size="default"
               className="gap-2"
               onClick={() => navigate('/japanese/review')}
             >
@@ -345,7 +345,7 @@ export function Dashboard({ stats }: DashboardProps) {
             </Button>
             <Button
               variant="outline"
-              size="lg"
+              size="default"
               className="gap-2"
               onClick={() => navigate('/japanese/explore')}
             >
@@ -354,7 +354,7 @@ export function Dashboard({ stats }: DashboardProps) {
             </Button>
             <Button
               variant="outline"
-              size="lg"
+              size="default"
               className="gap-2"
               onClick={() => navigate('/japanese/kanji')}
             >
