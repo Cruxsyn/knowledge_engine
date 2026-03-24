@@ -578,11 +578,11 @@ export function KanjiForge() {
           </CardContent>
         </Card>
 
-        {/* Forge Area */}
+        {/* Workspace */}
         <Card className="relative overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs uppercase tracking-widest text-warm-gray/70">
-              Forge Area
+              Workspace
             </CardTitle>
           </CardHeader>
           <CardContent>
