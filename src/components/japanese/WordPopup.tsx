@@ -1,5 +1,6 @@
 import type { JpTokenizedWord, JpMasteryLevel } from '@/types'
 import { cn } from '@/lib/utils'
+import { SpeakButton } from './SpeakButton'
 
 interface WordPopupProps {
   word: JpTokenizedWord
@@ -40,11 +41,12 @@ export function WordPopup({ word, position, onMarkKnown, onAddToSrs, onClose }: 
         }}
       >
         {/* Header */}
-        <div className="flex items-baseline gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-2">
           <span className="text-2xl font-serif text-parchment">{word.surface}</span>
           {word.reading && word.reading !== word.surface && (
             <span className="text-sm text-warm-gray">{word.reading}</span>
           )}
+          <SpeakButton text={word.reading || word.surface} size="sm" />
         </div>
 
         {/* Lemma (if different from surface) */}

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { preloadVoices } from '@/lib/japanese/audio'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/components/japanese/Dashboard'
@@ -92,6 +93,11 @@ export function JapanesePage() {
   // Load stats on mount
   useEffect(() => {
     useJapaneseStore.getState().loadStats()
+  }, [])
+
+  // Preload speech synthesis voices
+  useEffect(() => {
+    preloadVoices()
   }, [])
 
   function handleTabClick(tab: JapaneseState['activeTab']) {

@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
+import { SpeakButton, InlineSpeakButton } from './SpeakButton'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -719,14 +720,17 @@ export function KanjiForge() {
                     showResult && 'forge-kanji-appear',
                   )}
                 >
-                  <span
-                    className="text-7xl text-icon-gold leading-none"
-                    style={{
-                      textShadow: '0 0 30px rgba(200, 162, 74, 0.3)',
-                    }}
-                  >
-                    {forgeResult.character}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-7xl text-icon-gold leading-none"
+                      style={{
+                        textShadow: '0 0 30px rgba(200, 162, 74, 0.3)',
+                      }}
+                    >
+                      {forgeResult.character}
+                    </span>
+                    <SpeakButton text={forgeResult.character} />
+                  </div>
                   <p className="text-lg text-parchment mt-3 font-serif">
                     {forgeResult.meaning}
                   </p>
@@ -752,7 +756,7 @@ export function KanjiForge() {
                       {forgeResult.vocab.map((v) => (
                         <div
                           key={v.word}
-                          className="flex items-baseline gap-3 px-3 py-2 rounded bg-charcoal-slate/40"
+                          className="flex items-center gap-3 px-3 py-2 rounded bg-charcoal-slate/40"
                         >
                           <span className="text-base text-parchment font-medium">
                             {v.word}
@@ -760,6 +764,7 @@ export function KanjiForge() {
                           <span className="text-sm text-warm-gray">
                             ({v.reading})
                           </span>
+                          <InlineSpeakButton text={v.reading} />
                           <span className="text-sm text-warm-gray/70 ml-auto">
                             {v.meaning}
                           </span>

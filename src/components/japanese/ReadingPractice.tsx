@@ -4,6 +4,7 @@ import { jReadabilityScore, difficultyLabel, difficultyColor, isContentToken } f
 import { useJapanese } from '@/hooks/useJapanese'
 import { useJapaneseStore } from '@/stores/japaneseStore'
 import { WordPopup } from './WordPopup'
+import { SpeakButton } from './SpeakButton'
 import { cn } from '@/lib/utils'
 import type { JpTokenizedWord, JpMasteryLevel } from '@/types'
 
@@ -153,6 +154,10 @@ export function ReadingPractice() {
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-2xl text-parchment">Reading Practice</h2>
         <div className="flex items-center gap-3">
+          {/* Play All button */}
+          {tokens.length > 0 && (
+            <SpeakButton text={readingText} rate={0.8} size="sm" label="Play entire text" />
+          )}
           {/* Furigana toggle */}
           <button
             onClick={toggleFurigana}

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useJapaneseStore } from '@/stores/japaneseStore'
 import type { ReviewRating } from '@/stores/japaneseStore'
 import { ReviewSummary } from './ReviewSummary'
+import { SpeakButton, InlineSpeakButton } from './SpeakButton'
 
 const RATING_CONFIG: {
   rating: ReviewRating
@@ -142,12 +143,15 @@ export function ReviewSession() {
         >
           {/* Front content */}
           <div className="text-center space-y-3">
-            <div className={cn(
-              'font-serif',
-              currentCard.type === 'grammar' ? 'text-3xl' : 'text-5xl md:text-6xl',
-              'text-parchment leading-tight'
-            )}>
-              {currentCard.front}
+            <div className="flex items-center justify-center gap-3">
+              <div className={cn(
+                'font-serif',
+                currentCard.type === 'grammar' ? 'text-3xl' : 'text-5xl md:text-6xl',
+                'text-parchment leading-tight'
+              )}>
+                {currentCard.front}
+              </div>
+              <SpeakButton text={currentCard.front} size="lg" />
             </div>
 
             {currentCard.frontLabel && (
@@ -180,8 +184,9 @@ export function ReviewSession() {
             {/* Reading + Meaning */}
             <div className="text-center space-y-1">
               {currentCard.back.reading && (
-                <div className="text-2xl text-parchment font-serif">
+                <div className="text-2xl text-parchment font-serif inline-flex items-center gap-2 justify-center w-full">
                   {currentCard.back.reading}
+                  <InlineSpeakButton text={currentCard.back.reading} />
                 </div>
               )}
               <div className="text-lg text-warm-gray">

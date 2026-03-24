@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { X, Network, BookOpen, Layers, MessageSquare, Volume2, Loader2 } from 'lucide-react'
+import { SpeakButton, InlineSpeakButton } from './SpeakButton'
 import type { JpKanji, JpVocabulary, JpRadical, JpAssociation, JpMasteryLevel, JpItemType } from '@/types'
 
 // ── Mastery config ───────────────────────────────────────────────────
@@ -196,10 +197,15 @@ export function KanjiDetail({
       <div className="flex-shrink-0 p-5 border-b border-ash-stone/50">
         <div className="flex items-start gap-4">
           {/* Large character box */}
-          <div className="w-24 h-24 rounded-lg bg-charcoal-slate border border-ash-stone/30 flex items-center justify-center shrink-0">
+          <div className="w-24 h-24 rounded-lg bg-charcoal-slate border border-ash-stone/30 flex flex-col items-center justify-center shrink-0">
             <span className="text-7xl leading-none" style={{ fontFamily: 'system-ui, sans-serif' }}>
               {kanji.character}
             </span>
+            <SpeakButton
+              text={kunReadings[0]?.replace('.', '') || onReadings[0] || kanji.character}
+              size="sm"
+              className="mt-1"
+            />
           </div>
 
           {/* Info beside character */}
@@ -328,8 +334,9 @@ export function KanjiDetail({
                 <span className="text-xs text-warm-gray w-16 shrink-0 pt-0.5">On&apos;yomi</span>
                 <div className="flex flex-wrap gap-2">
                   {onReadings.map((r, i) => (
-                    <span key={i} className="font-mono text-sm bg-charcoal-slate px-2 py-0.5 rounded">
+                    <span key={i} className="font-mono text-sm bg-charcoal-slate px-2 py-0.5 rounded inline-flex items-center gap-1">
                       {r}
+                      <InlineSpeakButton text={r} />
                     </span>
                   ))}
                 </div>
@@ -340,8 +347,9 @@ export function KanjiDetail({
                 <span className="text-xs text-warm-gray w-16 shrink-0 pt-0.5">Kun&apos;yomi</span>
                 <div className="flex flex-wrap gap-2">
                   {kunReadings.map((r, i) => (
-                    <span key={i} className="font-mono text-sm bg-charcoal-slate px-2 py-0.5 rounded">
+                    <span key={i} className="font-mono text-sm bg-charcoal-slate px-2 py-0.5 rounded inline-flex items-center gap-1">
                       {r}
+                      <InlineSpeakButton text={r.replace('.', '')} />
                     </span>
                   ))}
                 </div>
@@ -368,6 +376,7 @@ export function KanjiDetail({
                     {v.word}
                   </span>
                   <span className="text-xs text-warm-gray font-mono">({v.reading})</span>
+                  <InlineSpeakButton text={v.reading} />
                   <span className="text-xs text-warm-gray/80 ml-auto">{v.meanings.join(', ')}</span>
                 </div>
               ))}

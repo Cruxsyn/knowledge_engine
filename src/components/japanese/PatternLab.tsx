@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { InlineSpeakButton } from './SpeakButton'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -936,7 +937,7 @@ function ExampleSentence({
 
   return (
     <div className="py-3 px-4 rounded-lg bg-ash-stone/40 border border-ash-stone/30">
-      <div className="text-xl text-parchment font-serif tracking-wide">
+      <div className="text-xl text-parchment font-serif tracking-wide inline-flex items-center flex-wrap">
         {parts.map((part, i) => (
           <span key={i}>
             <span>{part}</span>
@@ -947,6 +948,7 @@ function ExampleSentence({
             )}
           </span>
         ))}
+        <InlineSpeakButton text={example.japanese} rate={0.8} />
       </div>
       <div className="text-sm text-warm-gray mt-1.5">{example.english}</div>
     </div>

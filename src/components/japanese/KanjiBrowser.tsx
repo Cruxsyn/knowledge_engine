@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { Search, Grid3X3, List, GitBranch, Loader2 } from 'lucide-react'
+import { InlineSpeakButton } from './SpeakButton'
 import type { JpKanji, JpMasteryLevel, JpRadical } from '@/types'
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -286,10 +287,15 @@ function GridView({
               {entry.kanji.character}
             </span>
 
-            {/* Meaning */}
-            <span className="text-[10px] text-warm-gray truncate w-full">
-              {entry.kanji.meanings[0]}
-            </span>
+            {/* Meaning + audio */}
+            <div className="flex items-center gap-0.5 w-full justify-center">
+              <span className="text-[10px] text-warm-gray truncate">
+                {entry.kanji.meanings[0]}
+              </span>
+              <InlineSpeakButton
+                text={(entry.kanji.kun_readings?.[0]?.replace('.', '') || entry.kanji.on_readings?.[0] || entry.kanji.character)}
+              />
+            </div>
 
             {/* JLPT badge */}
             {entry.kanji.jlpt_level && (
