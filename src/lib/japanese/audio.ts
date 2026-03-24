@@ -1,121 +1,51 @@
 /**
- * Japanese audio playback module.
- *
- * Uses two strategies:
- * 1. Web Speech API (built-in, zero deps, offline capable)
- * 2. Edge TTS Browser (neural voices, higher quality, requires internet)
- *
- * Falls back gracefully: Edge TTS → Web Speech API → silent
+ * Japanese audio playback using Web Speech API.
+ * Simple, reliable, zero dependencies. Works offline on most platforms.
  */
 
-let edgeTtsAvailable: boolean | null = null
-let edgeTtsModule: typeof import('@kingdanx/edge-tts-browser') | null = null
-
-// Cache for generated audio blobs (avoid re-generating same text)
-const audioCache = new Map<string, string>() // text → objectURL
+let voicesLoaded = false
+let voicesPromise: Promise<void> | null = null
 
 /**
- * Lazily load and check Edge TTS availability.
+ * Ensure speech synthesis voices are loaded (async in Chrome).
  */
-async function getEdgeTts() {
-  if (edgeTtsAvailable === false) return null
-  if (edgeTtsModule) return edgeTtsModule
+function ensureVoices(): Promise<void> {
+  if (voicesLoaded) return Promise.resolve()
+  if (voicesPromise) return voicesPromise
 
-  try {
-    edgeTtsModule = await import('@kingdanx/edge-tts-browser')
-    edgeTtsAvailable = true
-    return edgeTtsModule
-  } catch {
-    edgeTtsAvailable = false
-    return null
-  }
+  voicesPromise = new Promise<void>((resolve) => {
+    const voices = speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      voicesLoaded = true
+      resolve()
+      return
+    }
+    // Chrome loads voices asynchronously
+    speechSynthesis.onvoiceschanged = () => {
+      voicesLoaded = true
+      resolve()
+    }
+    // Timeout fallback — speak without explicit voice selection
+    setTimeout(() => {
+      voicesLoaded = true
+      resolve()
+    }, 1000)
+  })
+
+  return voicesPromise
 }
 
 /**
- * Speak Japanese text using the best available method.
- *
- * @param text - Japanese text to speak
- * @param rate - Playback rate (0.5 = slow, 1.0 = normal, 1.5 = fast)
- * @param useNeural - Try neural voice first (Edge TTS), fallback to Web Speech
+ * Speak Japanese text using Web Speech API.
  */
 export async function speakJapanese(
   text: string,
-  rate: number = 0.9,
-  useNeural: boolean = true
+  rate: number = 0.9
 ): Promise<void> {
   if (!text.trim()) return
+  if (!('speechSynthesis' in window)) return
 
-  // Try Edge TTS (neural) first
-  if (useNeural) {
-    const success = await speakWithEdgeTts(text, rate)
-    if (success) return
-  }
-
-  // Fallback to Web Speech API
-  speakWithWebSpeech(text, rate)
-}
-
-/**
- * Speak using Edge TTS (Microsoft neural voices).
- * Returns true if successful.
- */
-async function speakWithEdgeTts(text: string, rate: number): Promise<boolean> {
-  try {
-    const mod = await getEdgeTts()
-    if (!mod) return false
-
-    // Check cache
-    const cacheKey = `edge:${text}:${rate}`
-    let objectUrl = audioCache.get(cacheKey)
-
-    if (!objectUrl) {
-      const EdgeTTSBrowser = mod.default
-      const tts = new EdgeTTSBrowser()
-
-      // Convert rate (0.5-2.0) to Edge TTS format (percentage string)
-      const ratePercent = Math.round((rate - 1) * 100)
-      const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`
-
-      tts.tts.setVoiceParams({
-        text,
-        voice: 'ja-JP-NanamiNeural',
-        rate: rateStr,
-        volume: '+0%',
-        pitch: '+0Hz',
-      })
-
-      const blob = await tts.ttsToFile() as Blob
-      objectUrl = URL.createObjectURL(blob)
-
-      // Cache (limit cache size)
-      if (audioCache.size > 200) {
-        const firstKey = audioCache.keys().next().value
-        if (firstKey) {
-          URL.revokeObjectURL(audioCache.get(firstKey)!)
-          audioCache.delete(firstKey)
-        }
-      }
-      audioCache.set(cacheKey, objectUrl)
-    }
-
-    const audio = new Audio(objectUrl)
-    audio.playbackRate = 1 // Rate already baked into TTS
-    await audio.play()
-    return true
-  } catch (err) {
-    console.warn('[audio] Edge TTS failed, falling back to Web Speech:', err)
-    return false
-  }
-}
-
-/**
- * Speak using the built-in Web Speech API.
- */
-function speakWithWebSpeech(text: string, rate: number): void {
-  if (!('speechSynthesis' in window)) {
-    console.warn('[audio] Web Speech API not available')
-    return
-  }
+  await ensureVoices()
 
   // Cancel any in-progress speech
   speechSynthesis.cancel()
@@ -151,14 +81,10 @@ export function isAudioAvailable(): boolean {
 }
 
 /**
- * Preload voices (needed on some browsers where getVoices() is async).
+ * Preload voices (call early so they're ready when needed).
  */
 export function preloadVoices(): void {
   if ('speechSynthesis' in window) {
-    speechSynthesis.getVoices()
-    // Chrome loads voices asynchronously
-    speechSynthesis.onvoiceschanged = () => {
-      speechSynthesis.getVoices()
-    }
+    ensureVoices()
   }
 }
