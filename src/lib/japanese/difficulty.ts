@@ -126,6 +126,34 @@ export function difficultyLabel(score: number): string {
 }
 
 /**
+ * Get a Tailwind color class for a difficulty label.
+ */
+export function difficultyColor(label: string): string {
+  switch (label) {
+    case 'upper-advanced':
+    case 'lower-advanced':
+      return 'text-oxide-red'
+    case 'upper-intermediate':
+    case 'lower-intermediate':
+      return 'text-icon-gold'
+    case 'upper-elementary':
+    case 'lower-elementary':
+      return 'text-patina-teal'
+    default:
+      return 'text-warm-gray'
+  }
+}
+
+/**
+ * Check if a token is a content word (not punctuation/symbol).
+ */
+export function isContentToken(token: { pos?: string; surface: string }): boolean {
+  if (!token.pos) return token.surface.trim().length > 0
+  const nonContent = new Set(['記号', '補助記号', '空白'])
+  return !nonContent.has(token.pos)
+}
+
+/**
  * Result type for i+1 detection.
  */
 export type I1Result =
