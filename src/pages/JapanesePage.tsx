@@ -1,9 +1,11 @@
-import { useEffect, Suspense, lazy } from 'react'
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/components/japanese/Dashboard'
 import { ReviewSession } from '@/components/japanese/ReviewSession'
 import { AssociationGraph } from '@/components/japanese/AssociationGraph'
+import { KanjiForge } from '@/components/japanese/KanjiForge'
+import PatternLab from '@/components/japanese/PatternLab'
 import { ReadingPractice } from '@/components/japanese/ReadingPractice'
 import { SettingsPanel } from '@/components/japanese/SettingsPanel'
 import { ProgressPanel } from '@/components/japanese/ProgressPanel'
@@ -19,7 +21,6 @@ import {
   LayoutDashboard,
   Settings,
   Construction,
-  Loader2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -35,28 +36,6 @@ function PlaceholderTab({ name, description }: { name: string; description?: str
     </div>
   )
 }
-
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <Loader2 className="h-8 w-8 text-warm-gray/40 animate-spin" />
-    </div>
-  )
-}
-
-// ── Lazy load new components (may not exist yet) ────────────────
-
-const KanjiForge = lazy(() =>
-  import('@/components/japanese/KanjiForge').catch(() => ({
-    default: () => <PlaceholderTab name="Kanji Forge" description="Build kanji from their components" />,
-  }))
-)
-
-const PatternLab = lazy(() =>
-  import('@/components/japanese/PatternLab').catch(() => ({
-    default: () => <PlaceholderTab name="Pattern Lab" description="Discover grammar patterns through examples" />,
-  }))
-)
 
 // ── Tab definitions ─────────────────────────────────────────────
 
@@ -127,17 +106,9 @@ export function JapanesePage() {
       case 'explore':
         return <AssociationGraph />
       case 'forge':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <KanjiForge />
-          </Suspense>
-        )
+        return <KanjiForge />
       case 'discover':
-        return (
-          <Suspense fallback={<LoadingSpinner />}>
-            <PatternLab />
-          </Suspense>
-        )
+        return <PatternLab />
       case 'read':
         return <ReadingPractice />
       case 'dashboard':
