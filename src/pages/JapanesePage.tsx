@@ -9,6 +9,7 @@ import { ReadingPractice } from '@/components/japanese/ReadingPractice'
 import { SettingsPanel } from '@/components/japanese/SettingsPanel'
 import { ProgressPanel } from '@/components/japanese/ProgressPanel'
 import { useJapaneseStore } from '@/stores/japaneseStore'
+import type { JapaneseState } from '@/stores/japaneseStore'
 import {
   LayoutDashboard,
   BookOpen,
@@ -19,23 +20,30 @@ import {
 } from 'lucide-react'
 
 interface TabDef {
-  id: string
+  id: JapaneseState['activeTab']
   label: string
-  path: string
   icon: LucideIcon
 }
 
 const TABS: TabDef[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/japanese', icon: LayoutDashboard },
-  { id: 'review', label: 'Review', path: '/japanese/review', icon: BookOpen },
-  { id: 'explore', label: 'Explore', path: '/japanese/explore', icon: Compass },
-  { id: 'kanji', label: 'Kanji', path: '/japanese/kanji', icon: BookText },
-  { id: 'reading', label: 'Reading', path: '/japanese/reading', icon: BookText },
-  { id: 'settings', label: 'Settings', path: '/japanese/settings', icon: Settings },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'review', label: 'Review', icon: BookOpen },
+  { id: 'explore', label: 'Explore', icon: Compass },
+  { id: 'kanji', label: 'Kanji', icon: BookText },
+  { id: 'reading', label: 'Reading', icon: BookText },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-function getActiveTab(pathname: string): string {
-  // Check from most specific to least specific
+const TAB_TO_PATH: Record<string, string> = {
+  dashboard: '/japanese',
+  review: '/japanese/review',
+  explore: '/japanese/explore',
+  kanji: '/japanese/kanji',
+  reading: '/japanese/reading',
+  settings: '/japanese/settings',
+}
+
+function pathToTab(pathname: string): JapaneseState['activeTab'] {
   if (pathname.startsWith('/japanese/review')) return 'review'
   if (pathname.startsWith('/japanese/explore')) return 'explore'
   if (pathname.startsWith('/japanese/kanji')) return 'kanji'
@@ -47,13 +55,29 @@ function getActiveTab(pathname: string): string {
 export function JapanesePage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const activeTab = getActiveTab(location.pathname)
+  const activeTab = useJapaneseStore((s) => s.activeTab)
+  const setActiveTab = useJapaneseStore((s) => s.setActiveTab)
   const stats = useJapaneseStore((s) => s.stats)
+
+  // Sync URL → store on mount / direct navigation
+  useEffect(() => {
+    const tabFromUrl = pathToTab(location.pathname)
+    if (tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [location.pathname])
 
   // Load stats on mount
   useEffect(() => {
     useJapaneseStore.getState().loadStats()
   }, [])
+
+  function handleTabClick(tab: JapaneseState['activeTab']) {
+    setActiveTab(tab)
+    // Update URL for bookmarkability without triggering a remount
+    const path = TAB_TO_PATH[tab] || '/japanese'
+    navigate(path, { replace: true })
+  }
 
   function renderContent() {
     switch (activeTab) {
@@ -102,7 +126,7 @@ export function JapanesePage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => navigate(tab.path)}
+                onClick={() => handleTabClick(tab.id)}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
                   'border-b-2 -mb-px whitespace-nowrap',

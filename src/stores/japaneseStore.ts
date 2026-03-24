@@ -249,7 +249,7 @@ const DEFAULT_SESSION = {
 
 // ── Store interface ─────────────────────────────────────────────
 
-interface JapaneseState {
+export interface JapaneseState {
   // Current view/navigation
   activeTab:
     | 'dashboard'
