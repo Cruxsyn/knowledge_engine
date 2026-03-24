@@ -69,7 +69,8 @@ async function speakWithEdgeTts(text: string, rate: number): Promise<boolean> {
     let objectUrl = audioCache.get(cacheKey)
 
     if (!objectUrl) {
-      const tts = new mod.EdgeTTSBrowser()
+      const EdgeTTSBrowser = mod.default
+      const tts = new EdgeTTSBrowser()
 
       // Convert rate (0.5-2.0) to Edge TTS format (percentage string)
       const ratePercent = Math.round((rate - 1) * 100)
@@ -83,7 +84,7 @@ async function speakWithEdgeTts(text: string, rate: number): Promise<boolean> {
         pitch: '+0Hz',
       })
 
-      const blob = await tts.ttsToBlob()
+      const blob = await tts.ttsToFile() as Blob
       objectUrl = URL.createObjectURL(blob)
 
       // Cache (limit cache size)
