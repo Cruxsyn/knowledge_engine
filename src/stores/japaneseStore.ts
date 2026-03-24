@@ -252,13 +252,12 @@ const DEFAULT_SESSION = {
 export interface JapaneseState {
   // Current view/navigation
   activeTab:
+    | 'explore'
+    | 'forge'
+    | 'discover'
+    | 'read'
     | 'dashboard'
     | 'review'
-    | 'explore'
-    | 'kanji'
-    | 'vocabulary'
-    | 'grammar'
-    | 'reading'
     | 'settings'
   setActiveTab: (tab: JapaneseState['activeTab']) => void
 
@@ -272,6 +271,14 @@ export interface JapaneseState {
   revealCard: () => void
   rateCard: (rating: ReviewRating) => Promise<void>
   resetSession: () => void
+
+  // Forge state
+  forgedKanji: string[]
+  addForgedKanji: (character: string) => void
+
+  // Discovery state
+  discoveredPatterns: string[]
+  addDiscoveredPattern: (patternId: string) => void
 
   // Kanji browser view
   kanjiBrowserView: 'grid' | 'list' | 'components'
@@ -331,7 +338,7 @@ export interface JapaneseState {
 
 export const useJapaneseStore = create<JapaneseState>((set, get) => ({
   // Navigation
-  activeTab: 'dashboard',
+  activeTab: 'explore',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Dashboard stats
@@ -579,6 +586,24 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
       session: { ...DEFAULT_SESSION },
     })
   },
+
+  // Forge state
+  forgedKanji: [],
+  addForgedKanji: (character) =>
+    set((state) => ({
+      forgedKanji: state.forgedKanji.includes(character)
+        ? state.forgedKanji
+        : [...state.forgedKanji, character],
+    })),
+
+  // Discovery state
+  discoveredPatterns: [],
+  addDiscoveredPattern: (patternId) =>
+    set((state) => ({
+      discoveredPatterns: state.discoveredPatterns.includes(patternId)
+        ? state.discoveredPatterns
+        : [...state.discoveredPatterns, patternId],
+    })),
 
   // Kanji browser
   kanjiBrowserView: 'grid',

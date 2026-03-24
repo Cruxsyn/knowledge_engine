@@ -1,55 +1,98 @@
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/components/japanese/Dashboard'
 import { ReviewSession } from '@/components/japanese/ReviewSession'
 import { AssociationGraph } from '@/components/japanese/AssociationGraph'
-import { KanjiBrowser } from '@/components/japanese/KanjiBrowser'
 import { ReadingPractice } from '@/components/japanese/ReadingPractice'
 import { SettingsPanel } from '@/components/japanese/SettingsPanel'
 import { ProgressPanel } from '@/components/japanese/ProgressPanel'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useJapaneseStore } from '@/stores/japaneseStore'
 import type { JapaneseState } from '@/stores/japaneseStore'
 import {
-  LayoutDashboard,
-  BookOpen,
   Compass,
-  type LucideIcon,
+  Hammer,
+  Lightbulb,
   BookText,
+  LayoutDashboard,
   Settings,
+  Construction,
+  Loader2,
+  type LucideIcon,
 } from 'lucide-react'
 
+// ── Placeholder for not-yet-built tabs ──────────────────────────
+
+function PlaceholderTab({ name, description }: { name: string; description?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4">
+      <Construction className="h-12 w-12 text-warm-gray/40" />
+      <h3 className="text-xl font-serif text-parchment">{name}</h3>
+      {description && <p className="text-warm-gray text-sm max-w-md text-center">{description}</p>}
+      <p className="text-warm-gray/50 text-xs">Coming soon</p>
+    </div>
+  )
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <Loader2 className="h-8 w-8 text-warm-gray/40 animate-spin" />
+    </div>
+  )
+}
+
+// ── Lazy load new components (may not exist yet) ────────────────
+
+const KanjiForge = lazy(() =>
+  import('@/components/japanese/KanjiForge').catch(() => ({
+    default: () => <PlaceholderTab name="Kanji Forge" description="Build kanji from their components" />,
+  }))
+)
+
+const PatternLab = lazy(() =>
+  import('@/components/japanese/PatternLab').catch(() => ({
+    default: () => <PlaceholderTab name="Pattern Lab" description="Discover grammar patterns through examples" />,
+  }))
+)
+
+// ── Tab definitions ─────────────────────────────────────────────
+
 interface TabDef {
-  id: JapaneseState['activeTab']
+  id: Exclude<JapaneseState['activeTab'], 'review'>
   label: string
   icon: LucideIcon
 }
 
 const TABS: TabDef[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'review', label: 'Review', icon: BookOpen },
   { id: 'explore', label: 'Explore', icon: Compass },
-  { id: 'kanji', label: 'Kanji', icon: BookText },
-  { id: 'reading', label: 'Reading', icon: BookText },
+  { id: 'forge', label: 'Forge', icon: Hammer },
+  { id: 'discover', label: 'Discover', icon: Lightbulb },
+  { id: 'read', label: 'Read', icon: BookText },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 const TAB_TO_PATH: Record<string, string> = {
-  dashboard: '/japanese',
+  explore: '/japanese',
+  forge: '/japanese/forge',
+  discover: '/japanese/discover',
+  read: '/japanese/read',
+  dashboard: '/japanese/dashboard',
   review: '/japanese/review',
-  explore: '/japanese/explore',
-  kanji: '/japanese/kanji',
-  reading: '/japanese/reading',
   settings: '/japanese/settings',
 }
 
 function pathToTab(pathname: string): JapaneseState['activeTab'] {
+  if (pathname.startsWith('/japanese/forge')) return 'forge'
+  if (pathname.startsWith('/japanese/discover')) return 'discover'
+  if (pathname.startsWith('/japanese/read')) return 'read'
+  if (pathname.startsWith('/japanese/dashboard')) return 'dashboard'
   if (pathname.startsWith('/japanese/review')) return 'review'
-  if (pathname.startsWith('/japanese/explore')) return 'explore'
-  if (pathname.startsWith('/japanese/kanji')) return 'kanji'
-  if (pathname.startsWith('/japanese/reading')) return 'reading'
   if (pathname.startsWith('/japanese/settings')) return 'settings'
-  return 'dashboard'
+  return 'explore'
 }
 
 export function JapanesePage() {
@@ -81,30 +124,49 @@ export function JapanesePage() {
 
   function renderContent() {
     switch (activeTab) {
+      case 'explore':
+        return <AssociationGraph />
+      case 'forge':
+        return (
+          <Suspense fallback={<LoadingSpinner />}>
+            <KanjiForge />
+          </Suspense>
+        )
+      case 'discover':
+        return (
+          <Suspense fallback={<LoadingSpinner />}>
+            <PatternLab />
+          </Suspense>
+        )
+      case 'read':
+        return <ReadingPractice />
       case 'dashboard':
         return (
           <div className="p-6 space-y-6 overflow-y-auto h-full">
             <Dashboard stats={stats} />
+            {/* Review access */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base text-parchment">SRS Review</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-warm-gray mb-3">
+                  {stats.reviewsDue} cards due for review
+                </p>
+                <Button variant="outline" onClick={() => handleTabClick('review')}>
+                  Start Review Session
+                </Button>
+              </CardContent>
+            </Card>
             <ProgressPanel />
           </div>
         )
       case 'review':
         return <ReviewSession />
-      case 'explore':
-        return <AssociationGraph />
-      case 'kanji':
-        return <KanjiBrowser />
-      case 'reading':
-        return <ReadingPractice />
       case 'settings':
         return <SettingsPanel />
       default:
-        return (
-          <div className="p-6 space-y-6 overflow-y-auto h-full">
-            <Dashboard stats={stats} />
-            <ProgressPanel />
-          </div>
-        )
+        return <AssociationGraph />
     }
   }
 
