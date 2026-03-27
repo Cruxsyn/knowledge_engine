@@ -1,5 +1,5 @@
-import { FSRS, Rating, type Card, type RecordLogItem, State, createEmptyCard, fsrs } from 'ts-fsrs'
-import type { JpSrsCard } from '@/types'
+import { FSRS, Rating, type Card, type Grade, type RecordLogItem, State, createEmptyCard, fsrs } from 'ts-fsrs'
+import type { JpSrsCard, JpSrsState } from '@/types'
 
 /**
  * Initialize FSRS with configurable desired retention.
@@ -29,7 +29,6 @@ export function dbCardToFsrs(card: JpSrsCard): Card {
   fsrsCard.lapses = card.lapses
   fsrsCard.state = card.state as State
   fsrsCard.last_review = card.last_review ? new Date(card.last_review) : undefined
-  fsrsCard.learning_steps = card.learning_steps
 
   return fsrsCard
 }
@@ -47,10 +46,8 @@ export function fsrsToDbCard(card: Card, original: JpSrsCard): Partial<JpSrsCard
     scheduled_days: card.scheduled_days,
     reps: card.reps,
     lapses: card.lapses,
-    state: card.state as number,
+    state: card.state as JpSrsState,
     last_review: card.last_review ? card.last_review.toISOString() : undefined,
-    learning_steps: card.learning_steps,
-    updated_at: new Date().toISOString(),
   }
 }
 
@@ -69,7 +66,7 @@ export function reviewCard(
   const fsrsCard = dbCardToFsrs(card)
   const now = new Date()
 
-  const ratingValue = rating as Rating
+  const ratingValue = rating as Grade
   const result: RecordLogItem = engine.next(fsrsCard, now, ratingValue)
 
   const updatedCard = fsrsToDbCard(result.card, card)

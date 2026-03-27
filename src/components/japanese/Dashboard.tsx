@@ -136,8 +136,6 @@ interface HeatMapProps {
 function HeatMap({ data }: HeatMapProps) {
   const cellSize = 11
   const gap = 2
-  const totalSize = cellSize + gap
-
   // Organize into weeks (columns) with days as rows (0=Sun..6=Sat)
   // We show 13 weeks (91 days) of data
   const weeks: { date: string; intensity: number }[][] = []

@@ -249,11 +249,11 @@ export function useJapanese() {
     }
   }, [isDbReady, refreshTrigger])
 
-  const getNewCards = useCallback(async (limit?: number) => {
+  const getNewCards = useCallback(async (itemType?: import('@/types').JpItemType, limit?: number) => {
     if (!isDbReady) return []
     try {
       const { getNewCards: fn } = await import('@/db/queries/japanese')
-      return fn(limit)
+      return fn(itemType, limit ?? 20)
     } catch (err) {
       console.error('[useJapanese] getNewCards error:', err)
       return []
@@ -341,11 +341,11 @@ export function useJapanese() {
     }
   }, [isDbReady, refreshTrigger])
 
-  const updateKnownWord = useCallback(async (data: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateKnownWord']>[0]) => {
+  const updateKnownWord = useCallback(async (lemma: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateKnownWord']>[0], data: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateKnownWord']>[1]) => {
     if (!isDbReady) return null
     try {
       const { updateKnownWord: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return fn(lemma, data)
     } catch (err) {
       console.error('[useJapanese] updateKnownWord error:', err)
       return null
@@ -411,22 +411,22 @@ export function useJapanese() {
 
   // ---- Progress ----
 
-  const getProgress = useCallback(async (dimension?: string) => {
-    if (!isDbReady) return dimension ? null : []
+  const getProgress = useCallback(async () => {
+    if (!isDbReady) return []
     try {
       const { getProgress: fn } = await import('@/db/queries/japanese')
-      return fn(dimension)
+      return fn()
     } catch (err) {
       console.error('[useJapanese] getProgress error:', err)
-      return dimension ? null : []
+      return []
     }
   }, [isDbReady, refreshTrigger])
 
-  const updateProgress = useCallback(async (data: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateProgress']>[0]) => {
+  const updateProgress = useCallback(async (dimension: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateProgress']>[0], data: Parameters<Awaited<typeof import('@/db/queries/japanese')>['updateProgress']>[1]) => {
     if (!isDbReady) return null
     try {
       const { updateProgress: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return fn(dimension, data)
     } catch (err) {
       console.error('[useJapanese] updateProgress error:', err)
       return null

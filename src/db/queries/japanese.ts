@@ -129,17 +129,6 @@ interface SrsCardRow {
   created_at: string
 }
 
-interface ReviewLogRow {
-  id: string
-  card_id: string
-  rating: number
-  state: number
-  elapsed_days: number
-  scheduled_days: number
-  reviewed_at: string
-  duration_ms: number | null
-}
-
 interface KnownWordRow {
   lemma: string
   reading: string | null
@@ -305,18 +294,6 @@ function rowToSrsCard(row: SrsCardRow): JpSrsCard {
   }
 }
 
-function rowToReviewLog(row: ReviewLogRow): JpReviewLog {
-  return {
-    id: row.id,
-    card_id: row.card_id,
-    rating: row.rating as 1 | 2 | 3 | 4,
-    state: row.state as JpSrsState,
-    elapsed_days: row.elapsed_days,
-    scheduled_days: row.scheduled_days,
-    reviewed_at: row.reviewed_at,
-    duration_ms: row.duration_ms || undefined,
-  }
-}
 
 function rowToKnownWord(row: KnownWordRow): JpKnownWord {
   return {

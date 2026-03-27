@@ -31,8 +31,8 @@ const SAMPLE_TEXTS = [
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function ReadingPractice() {
-  const { showFurigana, toggleFurigana, readingText, setReadingText } = useJapaneseStore()
-  const { getAllKnownLemmas, updateKnownWord, addWordToSrs } = useJapanese()
+  const { showFurigana, setShowFurigana, readingText, setReadingText } = useJapaneseStore()
+  const { getAllKnownLemmas, updateKnownWord } = useJapanese()
 
   const [tokenizerReady, setTokenizerReady] = useState(isTokenizerReady())
   const [tokenizerLoading, setTokenizerLoading] = useState(false)
@@ -62,12 +62,16 @@ export function ReadingPractice() {
 
   // ── Tokenize whenever readingText or tokenizer readiness changes ───────────
   const doTokenize = useCallback(
-    (text: string) => {
+    async (text: string) => {
       if (!text.trim()) {
         setTokens([])
         return
       }
-      const knownMap = getAllKnownLemmas()
+      const knownLemmas = await getAllKnownLemmas()
+      const knownMap = new Map<string, { mastery: JpMasteryLevel; reading?: string; meaning?: string }>()
+      for (const lemma of knownLemmas) {
+        knownMap.set(lemma, { mastery: 'known' })
+      }
       const result = tokenizeForReading(text, knownMap)
       setTokens(result)
     },
@@ -113,16 +117,24 @@ export function ReadingPractice() {
   const handleAddToSrs = useCallback(
     (lemma: string) => {
       const word = tokens.find((t) => t.lemma === lemma)
-      addWordToSrs(lemma, word?.reading, word?.meaning)
+      updateKnownWord(lemma, { mastery_level: 'learning', reading: word?.reading })
       // Re-tokenize to update mastery badge
       doTokenize(readingText)
       setSelectedWord(null)
     },
-    [tokens, addWordToSrs, doTokenize, readingText]
+    [tokens, updateKnownWord, doTokenize, readingText]
   )
 
   // ── Difficulty & stats ─────────────────────────────────────────────────────
-  const score = tokens.length > 0 ? jReadabilityScore(tokens) : null
+  const score = tokens.length > 0
+    ? jReadabilityScore(tokens.map((t) => ({
+        surface: t.surface,
+        lemma: t.lemma,
+        reading: t.reading ?? '',
+        pos: t.pos ?? '',
+        pos_detail: '',
+      })))
+    : null
   const label = score !== null ? difficultyLabel(score) : null
   const labelColor = label ? difficultyColor(label) : ''
 
@@ -160,7 +172,7 @@ export function ReadingPractice() {
           )}
           {/* Furigana toggle */}
           <button
-            onClick={toggleFurigana}
+            onClick={() => setShowFurigana(!showFurigana)}
             className={cn(
               'px-3 py-1.5 rounded text-xs font-medium transition-colors',
               showFurigana

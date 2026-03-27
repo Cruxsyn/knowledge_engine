@@ -466,16 +466,6 @@ function ComponentsView({
       {radicals.map((radical) => {
         // Find kanji that contain this radical character as a component
         // We match by character since the component relationship is in the DB
-        const matchingKanji = kanji.filter((entry) => {
-          // Simple heuristic: check if kanji character visually relates to radical
-          // For a proper implementation, this would use getKanjiComponents
-          // but for the browser view we show all kanji alongside their radicals
-          return entry.kanji.character !== radical.character
-        })
-
-        // For now, show all loaded kanji alongside radicals as a browsable list
-        // A more precise mapping would require batch-loading component relationships
-
         return (
           <div key={radical.id} className="border border-ash-stone/20 rounded p-3">
             {/* Radical header */}

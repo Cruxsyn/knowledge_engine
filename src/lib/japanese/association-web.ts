@@ -102,9 +102,9 @@ export function findInterferencePairs(
   threshold: number = 0.7
 ): { a: string; b: string; relation: string; weight: number }[] {
   const confusableCategories: Set<JpAssociationCategory> = new Set([
-    'phonetic',
+    'phonological',
     'semantic',
-    'graphemic',
+    'orthographic',
   ])
 
   return associations

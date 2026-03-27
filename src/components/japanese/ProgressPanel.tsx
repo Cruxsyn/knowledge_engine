@@ -446,16 +446,6 @@ export function ProgressPanel() {
             averageAccuracy: Math.round(dashStats.todayAccuracy * 100),
           })
 
-          // Build JLPT progress data from progress info
-          // N5 items are subset of the total; approximate using ratios
-          const totalKnown = dashStats.progress.reduce(
-            (s, p) => s + p.items_known + p.items_mastered, 0
-          )
-          const totalItems = dashStats.progress.reduce(
-            (s, p) => s + p.items_total, 0
-          )
-          const ratio = totalItems > 0 ? totalKnown / totalItems : 0
-
           // Approximate JLPT level breakdowns based on typical item counts
           const jlptTotals: Record<string, { kanji: number; vocab: number; grammar: number }> = {
             N5: { kanji: 80, vocab: 670, grammar: 128 },

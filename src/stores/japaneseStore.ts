@@ -11,7 +11,6 @@ import {
   addReviewLog,
   createOrUpdateGhost,
   removeGhost,
-  getAssociationsForNode,
 } from '@/db/queries/japanese'
 import {
   createFSRS,

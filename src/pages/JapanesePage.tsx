@@ -24,18 +24,6 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-// ── Placeholder for not-yet-built tabs ──────────────────────────
-
-function PlaceholderTab({ name, description }: { name: string; description?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-3">
-      <h3 className="text-base text-parchment">{name}</h3>
-      {description && <p className="text-warm-gray text-sm max-w-md text-center">{description}</p>}
-      <p className="text-warm-gray/50 text-xs">Coming soon</p>
-    </div>
-  )
-}
-
 // ── Tab definitions ─────────────────────────────────────────────
 
 interface TabDef {

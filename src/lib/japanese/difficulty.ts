@@ -40,8 +40,6 @@ export function jReadabilityScore(tokens: JpToken[]): number {
   }
 
   const sentenceCount = sentences.length
-  const totalTokens = tokens.length
-
   // Mean words per sentence (excluding pure punctuation)
   const contentTokenCount = tokens.filter((t) => t.pos !== '記号').length
   const meanWordsPerSentence = sentenceCount > 0 ? contentTokenCount / sentenceCount : contentTokenCount

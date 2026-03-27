@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { X, Network, BookOpen, Layers, MessageSquare, Volume2, Loader2 } from 'lucide-react'
 import { SpeakButton, InlineSpeakButton } from './SpeakButton'
-import type { JpKanji, JpVocabulary, JpRadical, JpAssociation, JpMasteryLevel, JpItemType } from '@/types'
+import type { JpKanji, JpVocabulary, JpRadical, JpMasteryLevel, JpItemType } from '@/types'
 
 // ── Mastery config ───────────────────────────────────────────────────
 
