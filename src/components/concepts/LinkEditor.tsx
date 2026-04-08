@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { useConcepts } from '@/hooks/useConcepts'
 import { Button } from '@/components/ui/button'
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { X, Plus, Trash2, ArrowRight } from 'lucide-react'
-import type { Concept, RelationshipType } from '@/types'
+import type { Concept, RelationshipType, Link } from '@/types'
 
 const relationshipTypes: { value: RelationshipType; label: string; description: string }[] = [
   { value: 'prerequisite_of', label: 'Prerequisite of', description: 'This concept must be learned before the target' },
@@ -30,8 +30,12 @@ export function LinkEditor({ concept, onClose }: LinkEditorProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [selectedRelationship, setSelectedRelationship] = useState<RelationshipType>('depends_on')
   const [reason, setReason] = useState('')
-  
-  const links = getConceptLinks(concept.id)
+  const [links, setLinks] = useState<Link[]>([])
+
+  useEffect(() => {
+    getConceptLinks(concept.id).then(setLinks)
+  }, [concept.id, getConceptLinks])
+
   const otherConcepts = concepts.filter(c => c.id !== concept.id)
 
   const handleAddLink = () => {

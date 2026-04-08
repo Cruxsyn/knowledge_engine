@@ -247,7 +247,7 @@ export function TerminalPage() {
     return content
   }
 
-  const handleNoteCommand = (subCommand: string, args: string) => {
+  const handleNoteCommand = async (subCommand: string, args: string) => {
     switch (subCommand) {
       case 'new':
         setDraftNote({
@@ -384,7 +384,7 @@ export function TerminalPage() {
           addOutput(`Missing required fields: ${missingFields.map(f => f.name).join(', ')}`, 'error')
           return
         }
-        const newNote = createNote({
+        const newNote = await createNote({
           title: draftNote.title,
           note_type: draftNote.note_type,
           content: draftNote.content as NoteContent,
@@ -409,7 +409,7 @@ export function TerminalPage() {
     }
   }
 
-  const handleConceptCommand = (subCommand: string, args: string) => {
+  const handleConceptCommand = async (subCommand: string, args: string) => {
     switch (subCommand) {
       case 'new':
         setDraftConcept({
@@ -473,7 +473,7 @@ export function TerminalPage() {
           addOutput('Missing required fields: name, definition', 'error')
           return
         }
-        const newConcept = createConcept({
+        const newConcept = await createConcept({
           name: draftConcept.name,
           definition: draftConcept.definition,
           intuition: draftConcept.intuition,
@@ -524,7 +524,7 @@ export function TerminalPage() {
 
   // ============ IMMEDIATE HANDLERS (for batch processing with refs) ============
 
-  const handleNoteCommandImmediate = (subCommand: string, args: string) => {
+  const handleNoteCommandImmediate = async (subCommand: string, args: string) => {
     switch (subCommand) {
       case 'new':
         draftNoteRef.current = {
@@ -660,7 +660,7 @@ export function TerminalPage() {
           addOutputImmediate(`Missing required fields: ${missingFields.map(f => f.name).join(', ')}`, 'error')
           return
         }
-        const newNote = createNote({
+        const newNote = await createNote({
           title: draftNoteRef.current.title,
           note_type: draftNoteRef.current.note_type,
           content: draftNoteRef.current.content as NoteContent,
@@ -685,7 +685,7 @@ export function TerminalPage() {
     }
   }
 
-  const handleConceptCommandImmediate = (subCommand: string, args: string) => {
+  const handleConceptCommandImmediate = async (subCommand: string, args: string) => {
     switch (subCommand) {
       case 'new':
         draftConceptRef.current = {
@@ -749,7 +749,7 @@ export function TerminalPage() {
           addOutputImmediate('Missing required fields: name, definition', 'error')
           return
         }
-        const newConcept = createConcept({
+        const newConcept = await createConcept({
           name: draftConceptRef.current.name,
           definition: draftConceptRef.current.definition,
           intuition: draftConceptRef.current.intuition,

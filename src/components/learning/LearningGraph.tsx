@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLearning } from '@/hooks/useLearning'
 import { PanelLeftClose, PanelLeftOpen, Check, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from './ProgressBar'
 import { cn } from '@/lib/utils'
+import type { LearningModule, Lesson, LessonProgress } from '@/types'
 
 interface LearningGraphProps {
   pathId: string
@@ -12,12 +13,40 @@ interface LearningGraphProps {
   className?: string
 }
 
+interface ModuleWithLessons {
+  module: LearningModule
+  lessons: { lesson: Lesson; progress: LessonProgress | null }[]
+}
+
 export function LearningGraph({ pathId, activeLessonId, onLessonSelect, className }: LearningGraphProps) {
   const { getModulesByPath, getLessonsByModule, getProgress, getPathProgress } = useLearning()
   const [collapsed, setCollapsed] = useState(false)
+  const [progress, setProgress] = useState<{ total: number; completed: number; percentage: number }>({ total: 0, completed: 0, percentage: 0 })
+  const [modulesWithLessons, setModulesWithLessons] = useState<ModuleWithLessons[]>([])
 
-  const progress = getPathProgress(pathId)
-  const modules = getModulesByPath(pathId)
+  useEffect(() => {
+    getPathProgress(pathId).then(setProgress)
+  }, [pathId, getPathProgress])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const mods = await getModulesByPath(pathId)
+      const result: ModuleWithLessons[] = []
+      for (const mod of mods) {
+        const lessons = await getLessonsByModule(mod.id)
+        const lessonsWithProgress: { lesson: Lesson; progress: LessonProgress | null }[] = []
+        for (const lesson of lessons) {
+          const prog = await getProgress(lesson.id)
+          lessonsWithProgress.push({ lesson, progress: prog })
+        }
+        result.push({ module: mod, lessons: lessonsWithProgress })
+      }
+      if (!cancelled) setModulesWithLessons(result)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [pathId, getModulesByPath, getLessonsByModule, getProgress])
 
   return (
     <div className={cn(
@@ -48,8 +77,7 @@ export function LearningGraph({ pathId, activeLessonId, onLessonSelect, classNam
       {!collapsed && (
         <>
           <nav className="flex-1 overflow-y-auto py-2">
-            {modules.map((mod) => {
-              const lessons = getLessonsByModule(mod.id)
+            {modulesWithLessons.map(({ module: mod, lessons }) => {
               return (
                 <div key={mod.id} className="mb-1">
                   {/* Module heading */}
@@ -60,9 +88,8 @@ export function LearningGraph({ pathId, activeLessonId, onLessonSelect, classNam
                   </div>
 
                   {/* Lessons */}
-                  {lessons.map((lesson) => {
+                  {lessons.map(({ lesson, progress: lessonProgress }) => {
                     const isActive = lesson.id === activeLessonId
-                    const lessonProgress = getProgress(lesson.id)
                     const isCompleted = lessonProgress?.completed || false
 
                     return (

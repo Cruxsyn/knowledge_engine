@@ -46,7 +46,7 @@ export function ConceptEditor({ concept, onClose }: ConceptEditorProps) {
           pitfalls: pitfalls.trim() || undefined,
         })
       } else {
-        const newConcept = createConcept({
+        const newConcept = await createConcept({
           name: name.trim(),
           definition: definition.trim(),
           intuition: intuition.trim() || undefined,

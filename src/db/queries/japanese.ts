@@ -1,4 +1,4 @@
-import { query, queryOne, execute, transaction } from '@/db/database'
+import { query, queryOne, execute } from '@/db/database'
 import { nanoid } from 'nanoid'
 import type {
   JpRadical,
@@ -348,19 +348,19 @@ function rowToStudySession(row: StudySessionRow): JpStudySession {
 // Radicals
 // ============================================================
 
-export function getAllRadicals(): JpRadical[] {
-  const rows = query<RadicalRow>('SELECT * FROM jp_radicals ORDER BY stroke_count ASC, frequency_rank ASC')
+export async function getAllRadicals(): Promise<JpRadical[]> {
+  const rows = await query<RadicalRow>('SELECT * FROM jp_radicals ORDER BY stroke_count ASC, frequency_rank ASC')
   return rows.map(rowToRadical)
 }
 
-export function getRadicalById(id: string): JpRadical | null {
-  const row = queryOne<RadicalRow>('SELECT * FROM jp_radicals WHERE id = ?', [id])
+export async function getRadicalById(id: string): Promise<JpRadical | null> {
+  const row = await queryOne<RadicalRow>('SELECT * FROM jp_radicals WHERE id = ?', [id])
   return row ? rowToRadical(row) : null
 }
 
-export function createRadical(data: Omit<JpRadical, 'id' | 'created_at'>): JpRadical {
+export async function createRadical(data: Omit<JpRadical, 'id' | 'created_at'>): Promise<JpRadical> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_radicals (id, character, meaning, alt_meanings, stroke_count, mnemonic, frequency_rank, position_hint)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -372,53 +372,54 @@ export function createRadical(data: Omit<JpRadical, 'id' | 'created_at'>): JpRad
       data.position_hint || null,
     ]
   )
-  return getRadicalById(id)!
+  return (await getRadicalById(id))!
 }
 
 // ============================================================
 // Kanji
 // ============================================================
 
-export function getAllKanji(jlptLevel?: number): JpKanji[] {
+export async function getAllKanji(jlptLevel?: number): Promise<JpKanji[]> {
   if (jlptLevel !== undefined) {
-    const rows = query<KanjiRow>(
+    const rows = await query<KanjiRow>(
       'SELECT * FROM jp_kanji WHERE jlpt_level = ? ORDER BY sort_order ASC, frequency_rank ASC',
       [jlptLevel]
     )
     return rows.map(rowToKanji)
   }
-  const rows = query<KanjiRow>('SELECT * FROM jp_kanji ORDER BY sort_order ASC, frequency_rank ASC')
+  const rows = await query<KanjiRow>('SELECT * FROM jp_kanji ORDER BY sort_order ASC, frequency_rank ASC')
   return rows.map(rowToKanji)
 }
 
-export function getKanjiById(id: string): JpKanji | null {
-  const row = queryOne<KanjiRow>('SELECT * FROM jp_kanji WHERE id = ?', [id])
+export async function getKanjiById(id: string): Promise<JpKanji | null> {
+  const row = await queryOne<KanjiRow>('SELECT * FROM jp_kanji WHERE id = ?', [id])
   return row ? rowToKanji(row) : null
 }
 
-export function getKanjiByCharacter(char: string): JpKanji | null {
-  const row = queryOne<KanjiRow>('SELECT * FROM jp_kanji WHERE character = ?', [char])
+export async function getKanjiByCharacter(char: string): Promise<JpKanji | null> {
+  const row = await queryOne<KanjiRow>('SELECT * FROM jp_kanji WHERE character = ?', [char])
   return row ? rowToKanji(row) : null
 }
 
-export function getKanjiComponents(kanjiId: string): { component: JpRadical | JpKanji; type: string; position?: string }[] {
-  const rows = query<ComponentRow>(
+export async function getKanjiComponents(kanjiId: string): Promise<{ component: JpRadical | JpKanji; type: string; position?: string }[]> {
+  const rows = await query<ComponentRow>(
     'SELECT component_id, component_type, position FROM jp_kanji_components WHERE kanji_id = ?',
     [kanjiId]
   )
-  return rows.map(row => {
+  const results = await Promise.all(rows.map(async row => {
     if (row.component_type === 'radical') {
-      const radical = getRadicalById(row.component_id)
+      const radical = await getRadicalById(row.component_id)
       return { component: radical!, type: 'radical', position: row.position || undefined }
     }
-    const kanji = getKanjiById(row.component_id)
+    const kanji = await getKanjiById(row.component_id)
     return { component: kanji!, type: 'kanji', position: row.position || undefined }
-  }).filter(c => c.component !== null)
+  }))
+  return results.filter(c => c.component !== null)
 }
 
-export function createKanji(data: Omit<JpKanji, 'id' | 'created_at'>): JpKanji {
+export async function createKanji(data: Omit<JpKanji, 'id' | 'created_at'>): Promise<JpKanji> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_kanji (id, character, meanings, on_readings, kun_readings, stroke_count,
       jlpt_level, grade, frequency_rank, mnemonic_meaning, mnemonic_reading,
       phonetic_component, semantic_component, sort_order)
@@ -439,32 +440,32 @@ export function createKanji(data: Omit<JpKanji, 'id' | 'created_at'>): JpKanji {
       data.sort_order || null,
     ]
   )
-  return getKanjiById(id)!
+  return (await getKanjiById(id))!
 }
 
 // ============================================================
 // Vocabulary
 // ============================================================
 
-export function getAllVocabulary(jlptLevel?: number): JpVocabulary[] {
+export async function getAllVocabulary(jlptLevel?: number): Promise<JpVocabulary[]> {
   if (jlptLevel !== undefined) {
-    const rows = query<VocabularyRow>(
+    const rows = await query<VocabularyRow>(
       'SELECT * FROM jp_vocabulary WHERE jlpt_level = ? ORDER BY sort_order ASC, frequency_rank ASC',
       [jlptLevel]
     )
     return rows.map(rowToVocabulary)
   }
-  const rows = query<VocabularyRow>('SELECT * FROM jp_vocabulary ORDER BY sort_order ASC, frequency_rank ASC')
+  const rows = await query<VocabularyRow>('SELECT * FROM jp_vocabulary ORDER BY sort_order ASC, frequency_rank ASC')
   return rows.map(rowToVocabulary)
 }
 
-export function getVocabById(id: string): JpVocabulary | null {
-  const row = queryOne<VocabularyRow>('SELECT * FROM jp_vocabulary WHERE id = ?', [id])
+export async function getVocabById(id: string): Promise<JpVocabulary | null> {
+  const row = await queryOne<VocabularyRow>('SELECT * FROM jp_vocabulary WHERE id = ?', [id])
   return row ? rowToVocabulary(row) : null
 }
 
-export function getVocabForKanji(kanjiId: string): JpVocabulary[] {
-  const rows = query<VocabularyRow>(
+export async function getVocabForKanji(kanjiId: string): Promise<JpVocabulary[]> {
+  const rows = await query<VocabularyRow>(
     `SELECT v.* FROM jp_vocabulary v
      INNER JOIN jp_vocab_kanji vk ON v.id = vk.vocab_id
      WHERE vk.kanji_id = ?
@@ -474,9 +475,9 @@ export function getVocabForKanji(kanjiId: string): JpVocabulary[] {
   return rows.map(rowToVocabulary)
 }
 
-export function createVocabulary(data: Omit<JpVocabulary, 'id' | 'created_at'>): JpVocabulary {
+export async function createVocabulary(data: Omit<JpVocabulary, 'id' | 'created_at'>): Promise<JpVocabulary> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_vocabulary (id, word, reading, meanings, part_of_speech, jlpt_level,
       frequency_rank, pitch_accent, conjugation_class, notes, sort_order)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -492,33 +493,33 @@ export function createVocabulary(data: Omit<JpVocabulary, 'id' | 'created_at'>):
       data.sort_order || null,
     ]
   )
-  return getVocabById(id)!
+  return (await getVocabById(id))!
 }
 
 // ============================================================
 // Grammar
 // ============================================================
 
-export function getAllGrammar(jlptLevel?: number): JpGrammar[] {
+export async function getAllGrammar(jlptLevel?: number): Promise<JpGrammar[]> {
   if (jlptLevel !== undefined) {
-    const rows = query<GrammarRow>(
+    const rows = await query<GrammarRow>(
       'SELECT * FROM jp_grammar WHERE jlpt_level = ? ORDER BY sort_order ASC',
       [jlptLevel]
     )
     return rows.map(rowToGrammar)
   }
-  const rows = query<GrammarRow>('SELECT * FROM jp_grammar ORDER BY sort_order ASC')
+  const rows = await query<GrammarRow>('SELECT * FROM jp_grammar ORDER BY sort_order ASC')
   return rows.map(rowToGrammar)
 }
 
-export function getGrammarById(id: string): JpGrammar | null {
-  const row = queryOne<GrammarRow>('SELECT * FROM jp_grammar WHERE id = ?', [id])
+export async function getGrammarById(id: string): Promise<JpGrammar | null> {
+  const row = await queryOne<GrammarRow>('SELECT * FROM jp_grammar WHERE id = ?', [id])
   return row ? rowToGrammar(row) : null
 }
 
-export function createGrammar(data: Omit<JpGrammar, 'id' | 'created_at'>): JpGrammar {
+export async function createGrammar(data: Omit<JpGrammar, 'id' | 'created_at'>): Promise<JpGrammar> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_grammar (id, pattern, meaning, formation, jlpt_level, examples, related_grammar, notes, sort_order)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -531,15 +532,15 @@ export function createGrammar(data: Omit<JpGrammar, 'id' | 'created_at'>): JpGra
       data.sort_order || null,
     ]
   )
-  return getGrammarById(id)!
+  return (await getGrammarById(id))!
 }
 
 // ============================================================
 // Sentences
 // ============================================================
 
-export function getSentencesForVocab(vocabId: string): JpSentence[] {
-  const rows = query<SentenceRow>(
+export async function getSentencesForVocab(vocabId: string): Promise<JpSentence[]> {
+  const rows = await query<SentenceRow>(
     `SELECT s.* FROM jp_sentences s
      INNER JOIN jp_sentence_vocab sv ON s.id = sv.sentence_id
      WHERE sv.vocab_id = ?
@@ -549,9 +550,9 @@ export function getSentencesForVocab(vocabId: string): JpSentence[] {
   return rows.map(rowToSentence)
 }
 
-export function createSentence(data: Omit<JpSentence, 'id' | 'created_at'>): JpSentence {
+export async function createSentence(data: Omit<JpSentence, 'id' | 'created_at'>): Promise<JpSentence> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_sentences (id, japanese, english, tokens, difficulty_score, source)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
@@ -569,8 +570,8 @@ export function createSentence(data: Omit<JpSentence, 'id' | 'created_at'>): JpS
 // Associations
 // ============================================================
 
-export function getAssociationsForNode(nodeId: string, nodeType: JpItemType | 'sentence'): JpAssociation[] {
-  const rows = query<AssociationRow>(
+export async function getAssociationsForNode(nodeId: string, nodeType: JpItemType | 'sentence'): Promise<JpAssociation[]> {
+  const rows = await query<AssociationRow>(
     `SELECT * FROM jp_associations
      WHERE (source_id = ? AND source_type = ?)
         OR (target_id = ? AND target_type = ? AND bidirectional = 1)
@@ -580,9 +581,9 @@ export function getAssociationsForNode(nodeId: string, nodeType: JpItemType | 's
   return rows.map(rowToAssociation)
 }
 
-export function createAssociation(data: Omit<JpAssociation, 'id' | 'created_at'>): JpAssociation {
+export async function createAssociation(data: Omit<JpAssociation, 'id' | 'created_at'>): Promise<JpAssociation> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_associations (id, source_id, source_type, target_id, target_type, category, relation, weight, bidirectional, metadata)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -597,7 +598,7 @@ export function createAssociation(data: Omit<JpAssociation, 'id' | 'created_at'>
   return { id, ...data, created_at: new Date().toISOString() }
 }
 
-export function getGraphData(centerId: string, centerType: JpItemType, depth: number): JpGraphData {
+export async function getGraphData(centerId: string, centerType: JpItemType, depth: number): Promise<JpGraphData> {
   const visitedIds = new Set<string>()
   const nodes: JpGraphNode[] = []
   const edges: JpGraphEdge[] = []
@@ -617,11 +618,11 @@ export function getGraphData(centerId: string, centerType: JpItemType, depth: nu
       if (type === 'sentence') continue
 
       // Resolve node label/mastery from the item table
-      const node = resolveGraphNode(id, type)
+      const node = await resolveGraphNode(id, type)
       if (node) nodes.push(node)
 
       // Get associations from this node
-      const assocs = query<AssociationRow>(
+      const assocs = await query<AssociationRow>(
         `SELECT * FROM jp_associations
          WHERE (source_id = ? AND source_type = ?)
             OR (target_id = ? AND target_type = ?)
@@ -667,29 +668,29 @@ export function getGraphData(centerId: string, centerType: JpItemType, depth: nu
   return { nodes, edges }
 }
 
-function resolveGraphNode(id: string, type: JpItemType): JpGraphNode | null {
+async function resolveGraphNode(id: string, type: JpItemType): Promise<JpGraphNode | null> {
   switch (type) {
     case 'radical': {
-      const r = getRadicalById(id)
+      const r = await getRadicalById(id)
       if (!r) return null
       return { id, type: 'radical', label: r.character, sublabel: r.meaning, mastery: 'unknown', data: r }
     }
     case 'kanji': {
-      const k = getKanjiById(id)
+      const k = await getKanjiById(id)
       if (!k) return null
-      const mastery = getItemMastery(id, 'kanji')
+      const mastery = await getItemMastery(id, 'kanji')
       return { id, type: 'kanji', label: k.character, sublabel: k.meanings[0], mastery, jlpt_level: k.jlpt_level, data: k }
     }
     case 'word': {
-      const v = getVocabById(id)
+      const v = await getVocabById(id)
       if (!v) return null
-      const mastery = getItemMastery(id, 'word')
+      const mastery = await getItemMastery(id, 'word')
       return { id, type: 'word', label: v.word, sublabel: v.meanings[0], mastery, jlpt_level: v.jlpt_level, data: v }
     }
     case 'grammar': {
-      const g = getGrammarById(id)
+      const g = await getGrammarById(id)
       if (!g) return null
-      const mastery = getItemMastery(id, 'grammar')
+      const mastery = await getItemMastery(id, 'grammar')
       return { id, type: 'grammar', label: g.pattern, sublabel: g.meaning, mastery, jlpt_level: g.jlpt_level, data: g }
     }
     default:
@@ -697,8 +698,8 @@ function resolveGraphNode(id: string, type: JpItemType): JpGraphNode | null {
   }
 }
 
-function getItemMastery(itemId: string, itemType: JpItemType): JpMasteryLevel {
-  const card = queryOne<{ state: number; reps: number; lapses: number }>(
+async function getItemMastery(itemId: string, itemType: JpItemType): Promise<JpMasteryLevel> {
+  const card = await queryOne<{ state: number; reps: number; lapses: number }>(
     'SELECT state, reps, lapses FROM jp_srs_cards WHERE item_id = ? AND item_type = ? LIMIT 1',
     [itemId, itemType]
   )
@@ -714,8 +715,8 @@ function getItemMastery(itemId: string, itemType: JpItemType): JpMasteryLevel {
 // SRS Cards
 // ============================================================
 
-export function getDueCards(limit: number = 50): JpSrsCard[] {
-  const rows = query<SrsCardRow>(
+export async function getDueCards(limit: number = 50): Promise<JpSrsCard[]> {
+  const rows = await query<SrsCardRow>(
     `SELECT * FROM jp_srs_cards
      WHERE state > 0 AND due <= datetime('now')
      ORDER BY due ASC
@@ -725,9 +726,9 @@ export function getDueCards(limit: number = 50): JpSrsCard[] {
   return rows.map(rowToSrsCard)
 }
 
-export function getNewCards(itemType?: JpItemType, limit: number = 20): JpSrsCard[] {
+export async function getNewCards(itemType?: JpItemType, limit: number = 20): Promise<JpSrsCard[]> {
   if (itemType) {
-    const rows = query<SrsCardRow>(
+    const rows = await query<SrsCardRow>(
       `SELECT * FROM jp_srs_cards
        WHERE state = 0 AND item_type = ?
        ORDER BY created_at ASC
@@ -736,7 +737,7 @@ export function getNewCards(itemType?: JpItemType, limit: number = 20): JpSrsCar
     )
     return rows.map(rowToSrsCard)
   }
-  const rows = query<SrsCardRow>(
+  const rows = await query<SrsCardRow>(
     `SELECT * FROM jp_srs_cards
      WHERE state = 0
      ORDER BY created_at ASC
@@ -746,9 +747,9 @@ export function getNewCards(itemType?: JpItemType, limit: number = 20): JpSrsCar
   return rows.map(rowToSrsCard)
 }
 
-export function createSrsCard(data: Omit<JpSrsCard, 'id' | 'created_at'>): JpSrsCard {
+export async function createSrsCard(data: Omit<JpSrsCard, 'id' | 'created_at'>): Promise<JpSrsCard> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, stability, difficulty,
       elapsed_days, scheduled_days, reps, lapses, state, due, last_review, implicit_boost)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -762,10 +763,10 @@ export function createSrsCard(data: Omit<JpSrsCard, 'id' | 'created_at'>): JpSrs
       data.implicit_boost,
     ]
   )
-  return getSrsCardById(id)!
+  return (await getSrsCardById(id))!
 }
 
-export function updateSrsCard(id: string, state: Partial<Omit<JpSrsCard, 'id' | 'created_at'>>): void {
+export async function updateSrsCard(id: string, state: Partial<Omit<JpSrsCard, 'id' | 'created_at'>>): Promise<void> {
   const fields: string[] = []
   const values: (string | number | null)[] = []
 
@@ -783,27 +784,27 @@ export function updateSrsCard(id: string, state: Partial<Omit<JpSrsCard, 'id' | 
   if (fields.length === 0) return
 
   values.push(id)
-  execute(`UPDATE jp_srs_cards SET ${fields.join(', ')} WHERE id = ?`, values)
+  await execute(`UPDATE jp_srs_cards SET ${fields.join(', ')} WHERE id = ?`, values)
 }
 
-export function getCardWithItemData(cardId: string): (JpSrsCard & { item: JpRadical | JpKanji | JpVocabulary | JpGrammar }) | null {
-  const card = getSrsCardById(cardId)
+export async function getCardWithItemData(cardId: string): Promise<(JpSrsCard & { item: JpRadical | JpKanji | JpVocabulary | JpGrammar }) | null> {
+  const card = await getSrsCardById(cardId)
   if (!card) return null
 
   let item: JpRadical | JpKanji | JpVocabulary | JpGrammar | null = null
   switch (card.item_type) {
-    case 'radical': item = getRadicalById(card.item_id); break
-    case 'kanji': item = getKanjiById(card.item_id); break
-    case 'word': item = getVocabById(card.item_id); break
-    case 'grammar': item = getGrammarById(card.item_id); break
+    case 'radical': item = await getRadicalById(card.item_id); break
+    case 'kanji': item = await getKanjiById(card.item_id); break
+    case 'word': item = await getVocabById(card.item_id); break
+    case 'grammar': item = await getGrammarById(card.item_id); break
   }
 
   if (!item) return null
   return { ...card, item }
 }
 
-function getSrsCardById(id: string): JpSrsCard | null {
-  const row = queryOne<SrsCardRow>('SELECT * FROM jp_srs_cards WHERE id = ?', [id])
+async function getSrsCardById(id: string): Promise<JpSrsCard | null> {
+  const row = await queryOne<SrsCardRow>('SELECT * FROM jp_srs_cards WHERE id = ?', [id])
   return row ? rowToSrsCard(row) : null
 }
 
@@ -811,9 +812,9 @@ function getSrsCardById(id: string): JpSrsCard | null {
 // Review Log
 // ============================================================
 
-export function addReviewLog(data: Omit<JpReviewLog, 'id' | 'reviewed_at'>): JpReviewLog {
+export async function addReviewLog(data: Omit<JpReviewLog, 'id' | 'reviewed_at'>): Promise<JpReviewLog> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_review_log (id, card_id, rating, state, elapsed_days, scheduled_days, duration_ms)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, data.card_id, data.rating, data.state, data.elapsed_days, data.scheduled_days, data.duration_ms || null]
@@ -821,8 +822,8 @@ export function addReviewLog(data: Omit<JpReviewLog, 'id' | 'reviewed_at'>): JpR
   return { id, ...data, reviewed_at: new Date().toISOString() }
 }
 
-export function getTodayReviewCount(): number {
-  const row = queryOne<{ count: number }>(
+export async function getTodayReviewCount(): Promise<number> {
+  const row = await queryOne<{ count: number }>(
     `SELECT COUNT(*) as count FROM jp_review_log
      WHERE date(reviewed_at) = date('now')`,
     []
@@ -830,8 +831,8 @@ export function getTodayReviewCount(): number {
   return row?.count ?? 0
 }
 
-export function getTodayAccuracy(): number {
-  const row = queryOne<{ total: number; correct: number }>(
+export async function getTodayAccuracy(): Promise<number> {
+  const row = await queryOne<{ total: number; correct: number }>(
     `SELECT
        COUNT(*) as total,
        SUM(CASE WHEN rating >= 3 THEN 1 ELSE 0 END) as correct
@@ -847,17 +848,17 @@ export function getTodayAccuracy(): number {
 // Known Words
 // ============================================================
 
-export function getKnownWord(lemma: string): JpKnownWord | null {
-  const row = queryOne<KnownWordRow>('SELECT * FROM jp_known_words WHERE lemma = ?', [lemma])
+export async function getKnownWord(lemma: string): Promise<JpKnownWord | null> {
+  const row = await queryOne<KnownWordRow>('SELECT * FROM jp_known_words WHERE lemma = ?', [lemma])
   return row ? rowToKnownWord(row) : null
 }
 
-export function updateKnownWord(lemma: string, data: Partial<Omit<JpKnownWord, 'lemma'>>): void {
-  const existing = getKnownWord(lemma)
+export async function updateKnownWord(lemma: string, data: Partial<Omit<JpKnownWord, 'lemma'>>): Promise<void> {
+  const existing = await getKnownWord(lemma)
   const now = new Date().toISOString()
 
   if (!existing) {
-    execute(
+    await execute(
       `INSERT INTO jp_known_words (lemma, reading, mastery_level, encounter_count, first_seen, last_encountered, source)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -880,20 +881,20 @@ export function updateKnownWord(lemma: string, data: Partial<Omit<JpKnownWord, '
     if (data.source !== undefined) { fields.push('source = ?'); values.push(data.source || null) }
 
     values.push(lemma)
-    execute(`UPDATE jp_known_words SET ${fields.join(', ')} WHERE lemma = ?`, values)
+    await execute(`UPDATE jp_known_words SET ${fields.join(', ')} WHERE lemma = ?`, values)
   }
 }
 
-export function getKnownWordCount(): number {
-  const row = queryOne<{ count: number }>(
+export async function getKnownWordCount(): Promise<number> {
+  const row = await queryOne<{ count: number }>(
     `SELECT COUNT(*) as count FROM jp_known_words WHERE mastery_level IN ('known', 'mastered')`,
     []
   )
   return row?.count ?? 0
 }
 
-export function getAllKnownLemmas(): string[] {
-  const rows = query<{ lemma: string }>(
+export async function getAllKnownLemmas(): Promise<string[]> {
+  const rows = await query<{ lemma: string }>(
     `SELECT lemma FROM jp_known_words WHERE mastery_level IN ('known', 'mastered')`,
     []
   )
@@ -904,8 +905,8 @@ export function getAllKnownLemmas(): string[] {
 // Ghosts
 // ============================================================
 
-export function getGhostsDue(limit: number = 10): JpGhost[] {
-  const rows = query<GhostRow>(
+export async function getGhostsDue(limit: number = 10): Promise<JpGhost[]> {
+  const rows = await query<GhostRow>(
     `SELECT * FROM jp_ghosts
      WHERE ghost_due <= datetime('now')
      ORDER BY ghost_due ASC
@@ -915,14 +916,14 @@ export function getGhostsDue(limit: number = 10): JpGhost[] {
   return rows.map(rowToGhost)
 }
 
-export function createOrUpdateGhost(cardId: string): void {
-  const existing = queryOne<GhostRow>(
+export async function createOrUpdateGhost(cardId: string): Promise<void> {
+  const existing = await queryOne<GhostRow>(
     'SELECT * FROM jp_ghosts WHERE card_id = ?',
     [cardId]
   )
 
   if (existing) {
-    execute(
+    await execute(
       `UPDATE jp_ghosts
        SET fail_count = fail_count + 1,
            ghost_interval = ghost_interval * 1.5,
@@ -932,7 +933,7 @@ export function createOrUpdateGhost(cardId: string): void {
     )
   } else {
     const id = nanoid()
-    execute(
+    await execute(
       `INSERT INTO jp_ghosts (id, card_id, fail_count, ghost_interval, ghost_due)
        VALUES (?, ?, 1, 0.5, datetime('now', '+12 hours'))`,
       [id, cardId]
@@ -940,25 +941,25 @@ export function createOrUpdateGhost(cardId: string): void {
   }
 }
 
-export function removeGhost(cardId: string): void {
-  execute('DELETE FROM jp_ghosts WHERE card_id = ?', [cardId])
+export async function removeGhost(cardId: string): Promise<void> {
+  await execute('DELETE FROM jp_ghosts WHERE card_id = ?', [cardId])
 }
 
 // ============================================================
 // Progress
 // ============================================================
 
-export function getProgress(): JpProgress[] {
-  const rows = query<ProgressRow>('SELECT * FROM jp_progress ORDER BY dimension ASC')
+export async function getProgress(): Promise<JpProgress[]> {
+  const rows = await query<ProgressRow>('SELECT * FROM jp_progress ORDER BY dimension ASC')
   return rows.map(rowToProgress)
 }
 
-export function updateProgress(dimension: JpProgress['dimension'], data: Partial<Omit<JpProgress, 'dimension' | 'updated_at'>>): void {
+export async function updateProgress(dimension: JpProgress['dimension'], data: Partial<Omit<JpProgress, 'dimension' | 'updated_at'>>): Promise<void> {
   const now = new Date().toISOString()
-  const existing = queryOne<ProgressRow>('SELECT * FROM jp_progress WHERE dimension = ?', [dimension])
+  const existing = await queryOne<ProgressRow>('SELECT * FROM jp_progress WHERE dimension = ?', [dimension])
 
   if (!existing) {
-    execute(
+    await execute(
       `INSERT INTO jp_progress (dimension, current_level, items_total, items_learning, items_known, items_mastered, daily_streak, last_study_date, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -986,64 +987,62 @@ export function updateProgress(dimension: JpProgress['dimension'], data: Partial
     if (data.last_study_date !== undefined) { fields.push('last_study_date = ?'); values.push(data.last_study_date) }
 
     values.push(dimension)
-    execute(`UPDATE jp_progress SET ${fields.join(', ')} WHERE dimension = ?`, values)
+    await execute(`UPDATE jp_progress SET ${fields.join(', ')} WHERE dimension = ?`, values)
   }
 }
 
-export function recalculateProgress(): void {
+export async function recalculateProgress(): Promise<void> {
   const dimensions: JpProgress['dimension'][] = ['vocabulary', 'kanji', 'grammar']
   const itemTypeMap: Record<string, JpItemType> = { vocabulary: 'word', kanji: 'kanji', grammar: 'grammar' }
   const now = new Date().toISOString()
 
-  transaction(() => {
-    for (const dim of dimensions) {
-      const itemType = itemTypeMap[dim]
+  for (const dim of dimensions) {
+    const itemType = itemTypeMap[dim]
 
-      const total = queryOne<{ count: number }>(
-        'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ?',
-        [itemType]
-      )
-      const learning = queryOne<{ count: number }>(
-        'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state IN (1, 3)',
-        [itemType]
-      )
-      const known = queryOne<{ count: number }>(
-        'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state = 2',
-        [itemType]
-      )
-      const mastered = queryOne<{ count: number }>(
-        'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state = 2 AND reps >= 5 AND lapses = 0',
-        [itemType]
-      )
+    const total = await queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ?',
+      [itemType]
+    )
+    const learning = await queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state IN (1, 3)',
+      [itemType]
+    )
+    const known = await queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state = 2',
+      [itemType]
+    )
+    const mastered = await queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM jp_srs_cards WHERE item_type = ? AND state = 2 AND reps >= 5 AND lapses = 0',
+      [itemType]
+    )
 
-      const itemsTotal = total?.count ?? 0
-      const itemsLearning = learning?.count ?? 0
-      const itemsKnown = known?.count ?? 0
-      const itemsMastered = mastered?.count ?? 0
+    const itemsTotal = total?.count ?? 0
+    const itemsLearning = learning?.count ?? 0
+    const itemsKnown = known?.count ?? 0
+    const itemsMastered = mastered?.count ?? 0
 
-      // Estimate JLPT level (0-5 scale) from mastery ratio
-      const ratio = itemsTotal > 0 ? (itemsKnown + itemsMastered) / itemsTotal : 0
-      const currentLevel = Math.min(5, ratio * 5)
+    // Estimate JLPT level (0-5 scale) from mastery ratio
+    const ratio = itemsTotal > 0 ? (itemsKnown + itemsMastered) / itemsTotal : 0
+    const currentLevel = Math.min(5, ratio * 5)
 
-      updateProgress(dim, {
-        current_level: currentLevel,
-        items_total: itemsTotal,
-        items_learning: itemsLearning,
-        items_known: itemsKnown,
-        items_mastered: itemsMastered,
-        last_study_date: now,
-      })
-    }
-  })
+    await updateProgress(dim, {
+      current_level: currentLevel,
+      items_total: itemsTotal,
+      items_learning: itemsLearning,
+      items_known: itemsKnown,
+      items_mastered: itemsMastered,
+      last_study_date: now,
+    })
+  }
 }
 
 // ============================================================
 // Sessions
 // ============================================================
 
-export function logStudySession(data: Omit<JpStudySession, 'id' | 'created_at'>): JpStudySession {
+export async function logStudySession(data: Omit<JpStudySession, 'id' | 'created_at'>): Promise<JpStudySession> {
   const id = nanoid()
-  execute(
+  await execute(
     `INSERT INTO jp_study_sessions (id, session_date, duration_minutes, cards_reviewed, cards_new, accuracy)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [id, data.session_date, data.duration_minutes, data.cards_reviewed, data.cards_new, data.accuracy]
@@ -1051,8 +1050,8 @@ export function logStudySession(data: Omit<JpStudySession, 'id' | 'created_at'>)
   return { id, ...data, created_at: new Date().toISOString() }
 }
 
-export function getStudySessions(days: number = 30): JpStudySession[] {
-  const rows = query<StudySessionRow>(
+export async function getStudySessions(days: number = 30): Promise<JpStudySession[]> {
+  const rows = await query<StudySessionRow>(
     `SELECT * FROM jp_study_sessions
      WHERE session_date >= date('now', '-' || ? || ' days')
      ORDER BY session_date DESC`,
@@ -1061,8 +1060,8 @@ export function getStudySessions(days: number = 30): JpStudySession[] {
   return rows.map(rowToStudySession)
 }
 
-export function getCurrentStreak(): number {
-  const rows = query<{ session_date: string }>(
+export async function getCurrentStreak(): Promise<number> {
+  const rows = await query<{ session_date: string }>(
     `SELECT DISTINCT session_date FROM jp_study_sessions
      ORDER BY session_date DESC
      LIMIT 365`,
@@ -1094,21 +1093,21 @@ export function getCurrentStreak(): number {
 // Settings
 // ============================================================
 
-export function getSetting(key: string): string | null {
-  const row = queryOne<{ value: string }>('SELECT value FROM jp_settings WHERE key = ?', [key])
+export async function getSetting(key: string): Promise<string | null> {
+  const row = await queryOne<{ value: string }>('SELECT value FROM jp_settings WHERE key = ?', [key])
   return row?.value ?? null
 }
 
-export function setSetting(key: string, value: string): void {
-  execute(
+export async function setSetting(key: string, value: string): Promise<void> {
+  await execute(
     `INSERT INTO jp_settings (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
     [key, value]
   )
 }
 
-export function getAllSettings(): Record<string, string> {
-  const rows = query<{ key: string; value: string }>('SELECT key, value FROM jp_settings')
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const rows = await query<{ key: string; value: string }>('SELECT key, value FROM jp_settings')
   const settings: Record<string, string> = {}
   for (const row of rows) {
     settings[row.key] = row.value
@@ -1120,16 +1119,16 @@ export function getAllSettings(): Record<string, string> {
 // Dashboard
 // ============================================================
 
-export function getDashboardStats(): JpDashboardStats {
-  const dueRow = queryOne<{ count: number }>(
+export async function getDashboardStats(): Promise<JpDashboardStats> {
+  const dueRow = await queryOne<{ count: number }>(
     `SELECT COUNT(*) as count FROM jp_srs_cards WHERE state > 0 AND due <= datetime('now')`,
     []
   )
-  const newRow = queryOne<{ count: number }>(
+  const newRow = await queryOne<{ count: number }>(
     'SELECT COUNT(*) as count FROM jp_srs_cards WHERE state = 0',
     []
   )
-  const ghostRow = queryOne<{ count: number }>(
+  const ghostRow = await queryOne<{ count: number }>(
     `SELECT COUNT(*) as count FROM jp_ghosts WHERE ghost_due <= datetime('now')`,
     []
   )
@@ -1138,10 +1137,10 @@ export function getDashboardStats(): JpDashboardStats {
     dueCards: dueRow?.count ?? 0,
     newCardsAvailable: newRow?.count ?? 0,
     ghostCount: ghostRow?.count ?? 0,
-    todayReviewed: getTodayReviewCount(),
-    todayAccuracy: getTodayAccuracy(),
-    currentStreak: getCurrentStreak(),
-    totalKnownWords: getKnownWordCount(),
-    progress: getProgress(),
+    todayReviewed: await getTodayReviewCount(),
+    todayAccuracy: await getTodayAccuracy(),
+    currentStreak: await getCurrentStreak(),
+    totalKnownWords: await getKnownWordCount(),
+    progress: await getProgress(),
   }
 }

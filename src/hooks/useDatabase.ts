@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { initDatabase, persistDatabase, exportDatabase, importDatabaseData } from '@/db/database'
+import { initDatabase, exportDatabase, importDatabaseData } from '@/db/database'
 import { downloadDatabase, importDatabase } from '@/lib/persistence'
 import { useAppStore } from '@/stores/appStore'
 
@@ -33,8 +33,8 @@ export function useDatabase() {
     }
   }, [isDbReady, setDbReady])
 
-  const exportDb = () => {
-    const data = exportDatabase()
+  const exportDb = async () => {
+    const data = await exportDatabase()
     const timestamp = new Date().toISOString().split('T')[0]
     downloadDatabase(data, `knowledge-backup-${timestamp}.db`)
   }
@@ -51,15 +51,10 @@ export function useDatabase() {
     }
   }
 
-  const forceSave = async () => {
-    await persistDatabase()
-  }
-
   return {
     isReady: isDbReady,
     error,
     exportDb,
     importDb,
-    forceSave,
   }
 }

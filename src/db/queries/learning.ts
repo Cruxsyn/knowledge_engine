@@ -112,68 +112,68 @@ function rowToProgress(row: ProgressRow): LessonProgress {
 
 // ---- Learning Paths ----
 
-export function getAllPaths(): LearningPath[] {
-  const rows = query<PathRow>('SELECT * FROM learning_paths ORDER BY updated_at DESC')
+export async function getAllPaths(): Promise<LearningPath[]> {
+  const rows = await query<PathRow>('SELECT * FROM learning_paths ORDER BY updated_at DESC')
   return rows.map(rowToPath)
 }
 
-export function getPathById(id: string): LearningPath | null {
-  const row = queryOne<PathRow>('SELECT * FROM learning_paths WHERE id = ?', [id])
+export async function getPathById(id: string): Promise<LearningPath | null> {
+  const row = await queryOne<PathRow>('SELECT * FROM learning_paths WHERE id = ?', [id])
   return row ? rowToPath(row) : null
 }
 
-export function createPath(data: { title: string; description: string }): LearningPath {
+export async function createPath(data: { title: string; description: string }): Promise<LearningPath> {
   const id = generateId()
   const now = new Date().toISOString()
-  execute(
+  await execute(
     'INSERT INTO learning_paths (id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     [id, data.title, data.description, now, now]
   )
-  return getPathById(id)!
+  return (await getPathById(id))!
 }
 
 // ---- Learning Modules ----
 
-export function getModulesByPath(pathId: string): LearningModule[] {
-  const rows = query<ModuleRow>(
+export async function getModulesByPath(pathId: string): Promise<LearningModule[]> {
+  const rows = await query<ModuleRow>(
     'SELECT * FROM learning_modules WHERE path_id = ? ORDER BY sort_order ASC',
     [pathId]
   )
   return rows.map(rowToModule)
 }
 
-export function getModuleById(id: string): LearningModule | null {
-  const row = queryOne<ModuleRow>('SELECT * FROM learning_modules WHERE id = ?', [id])
+export async function getModuleById(id: string): Promise<LearningModule | null> {
+  const row = await queryOne<ModuleRow>('SELECT * FROM learning_modules WHERE id = ?', [id])
   return row ? rowToModule(row) : null
 }
 
-export function createModule(data: { path_id: string; title: string; description?: string; sort_order: number }): LearningModule {
+export async function createModule(data: { path_id: string; title: string; description?: string; sort_order: number }): Promise<LearningModule> {
   const id = generateId()
   const now = new Date().toISOString()
-  execute(
+  await execute(
     'INSERT INTO learning_modules (id, path_id, title, description, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [id, data.path_id, data.title, data.description || null, data.sort_order, now, now]
   )
-  return getModuleById(id)!
+  return (await getModuleById(id))!
 }
 
 // ---- Lessons ----
 
-export function getLessonsByModule(moduleId: string): Lesson[] {
-  const rows = query<LessonRow>(
+export async function getLessonsByModule(moduleId: string): Promise<Lesson[]> {
+  const rows = await query<LessonRow>(
     'SELECT * FROM lessons WHERE module_id = ? ORDER BY sort_order ASC',
     [moduleId]
   )
   return rows.map(rowToLesson)
 }
 
-export function getLessonById(id: string): Lesson | null {
-  const row = queryOne<LessonRow>('SELECT * FROM lessons WHERE id = ?', [id])
+export async function getLessonById(id: string): Promise<Lesson | null> {
+  const row = await queryOne<LessonRow>('SELECT * FROM lessons WHERE id = ?', [id])
   return row ? rowToLesson(row) : null
 }
 
-export function getAllLessonsByPath(pathId: string): Lesson[] {
-  const rows = query<LessonRow>(`
+export async function getAllLessonsByPath(pathId: string): Promise<Lesson[]> {
+  const rows = await query<LessonRow>(`
     SELECT l.* FROM lessons l
     INNER JOIN learning_modules m ON l.module_id = m.id
     WHERE m.path_id = ?
@@ -182,7 +182,7 @@ export function getAllLessonsByPath(pathId: string): Lesson[] {
   return rows.map(rowToLesson)
 }
 
-export function createLesson(data: {
+export async function createLesson(data: {
   module_id: string
   title: string
   subtitle?: string
@@ -190,31 +190,31 @@ export function createLesson(data: {
   sort_order: number
   status?: LessonStatus
   estimated_minutes?: number
-}): Lesson {
+}): Promise<Lesson> {
   const id = generateId()
   const now = new Date().toISOString()
-  execute(
+  await execute(
     `INSERT INTO lessons (id, module_id, title, subtitle, content, sort_order, status, estimated_minutes, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, data.module_id, data.title, data.subtitle || null, data.content, data.sort_order,
      data.status || 'published', data.estimated_minutes || null, now, now]
   )
-  return getLessonById(id)!
+  return (await getLessonById(id))!
 }
 
 // ---- Lesson Terms ----
 
-export function getTermsByLesson(lessonId: string): LessonTerm[] {
-  const rows = query<TermRow>(
+export async function getTermsByLesson(lessonId: string): Promise<LessonTerm[]> {
+  const rows = await query<TermRow>(
     'SELECT * FROM lesson_terms WHERE lesson_id = ?',
     [lessonId]
   )
   return rows.map(rowToTerm)
 }
 
-export function createTerm(data: { lesson_id: string; term: string; definition: string; concept_id?: string }): LessonTerm {
+export async function createTerm(data: { lesson_id: string; term: string; definition: string; concept_id?: string }): Promise<LessonTerm> {
   const id = generateId()
-  execute(
+  await execute(
     'INSERT INTO lesson_terms (id, lesson_id, term, definition, concept_id) VALUES (?, ?, ?, ?, ?)',
     [id, data.lesson_id, data.term, data.definition, data.concept_id || null]
   )
@@ -223,15 +223,15 @@ export function createTerm(data: { lesson_id: string; term: string; definition: 
 
 // ---- Lesson Concepts ----
 
-export function addLessonConcept(lessonId: string, conceptId: string): void {
-  execute(
+export async function addLessonConcept(lessonId: string, conceptId: string): Promise<void> {
+  await execute(
     'INSERT OR IGNORE INTO lesson_concepts (lesson_id, concept_id) VALUES (?, ?)',
     [lessonId, conceptId]
   )
 }
 
-export function getLessonConceptIds(lessonId: string): string[] {
-  const rows = query<{ concept_id: string }>(
+export async function getLessonConceptIds(lessonId: string): Promise<string[]> {
+  const rows = await query<{ concept_id: string }>(
     'SELECT concept_id FROM lesson_concepts WHERE lesson_id = ?',
     [lessonId]
   )
@@ -240,25 +240,25 @@ export function getLessonConceptIds(lessonId: string): string[] {
 
 // ---- Progress ----
 
-export function getProgress(lessonId: string): LessonProgress | null {
-  const row = queryOne<ProgressRow>(
+export async function getProgress(lessonId: string): Promise<LessonProgress | null> {
+  const row = await queryOne<ProgressRow>(
     'SELECT * FROM lesson_progress WHERE lesson_id = ?',
     [lessonId]
   )
   return row ? rowToProgress(row) : null
 }
 
-export function getAllProgress(): LessonProgress[] {
-  const rows = query<ProgressRow>('SELECT * FROM lesson_progress')
+export async function getAllProgress(): Promise<LessonProgress[]> {
+  const rows = await query<ProgressRow>('SELECT * FROM lesson_progress')
   return rows.map(rowToProgress)
 }
 
-export function updateProgress(lessonId: string, updates: { completed?: boolean; scroll_position?: number }): void {
+export async function updateProgress(lessonId: string, updates: { completed?: boolean; scroll_position?: number }): Promise<void> {
   const now = new Date().toISOString()
-  const existing = getProgress(lessonId)
+  const existing = await getProgress(lessonId)
 
   if (!existing) {
-    execute(
+    await execute(
       `INSERT INTO lesson_progress (lesson_id, completed, completed_at, scroll_position, updated_at)
        VALUES (?, ?, ?, ?, ?)`,
       [
@@ -287,18 +287,18 @@ export function updateProgress(lessonId: string, updates: { completed?: boolean;
     }
 
     values.push(lessonId)
-    execute(`UPDATE lesson_progress SET ${fields.join(', ')} WHERE lesson_id = ?`, values)
+    await execute(`UPDATE lesson_progress SET ${fields.join(', ')} WHERE lesson_id = ?`, values)
   }
 }
 
-export function getPathProgress(pathId: string): { total: number; completed: number; percentage: number } {
-  const totalRow = queryOne<{ count: number }>(`
+export async function getPathProgress(pathId: string): Promise<{ total: number; completed: number; percentage: number }> {
+  const totalRow = await queryOne<{ count: number }>(`
     SELECT COUNT(*) as count FROM lessons l
     INNER JOIN learning_modules m ON l.module_id = m.id
     WHERE m.path_id = ?
   `, [pathId])
 
-  const completedRow = queryOne<{ count: number }>(`
+  const completedRow = await queryOne<{ count: number }>(`
     SELECT COUNT(*) as count FROM lesson_progress p
     INNER JOIN lessons l ON p.lesson_id = l.id
     INNER JOIN learning_modules m ON l.module_id = m.id
@@ -323,7 +323,7 @@ export interface LearningGraphNode {
   moduleTitle: string
   moduleId: string
   completed: boolean
-  sortKey: number // module sort_order * 1000 + lesson sort_order
+  sortKey: number
 }
 
 export interface LearningGraphEdge {
@@ -331,9 +331,8 @@ export interface LearningGraphEdge {
   to: string
 }
 
-export function getLearningGraphData(pathId: string): { nodes: LearningGraphNode[]; edges: LearningGraphEdge[] } {
-  // Get all lessons with module info and progress
-  const nodeRows = query<{
+export async function getLearningGraphData(pathId: string): Promise<{ nodes: LearningGraphNode[]; edges: LearningGraphEdge[] }> {
+  const nodeRows = await query<{
     id: string
     title: string
     module_title: string
@@ -362,8 +361,7 @@ export function getLearningGraphData(pathId: string): { nodes: LearningGraphNode
     sortKey: r.module_sort * 1000 + r.lesson_sort,
   }))
 
-  // Build edges: lessons sharing concepts are connected
-  const edgeRows = query<{ from_lesson: string; to_lesson: string }>(`
+  const edgeRows = await query<{ from_lesson: string; to_lesson: string }>(`
     SELECT DISTINCT lc1.lesson_id as from_lesson, lc2.lesson_id as to_lesson
     FROM lesson_concepts lc1
     INNER JOIN lesson_concepts lc2 ON lc1.concept_id = lc2.concept_id AND lc1.lesson_id < lc2.lesson_id
@@ -379,7 +377,6 @@ export function getLearningGraphData(pathId: string): { nodes: LearningGraphNode
     to: r.to_lesson,
   }))
 
-  // Also add sequential edges within each module
   const moduleGroups = new Map<string, string[]>()
   for (const node of nodes) {
     if (!moduleGroups.has(node.moduleId)) {
@@ -390,7 +387,6 @@ export function getLearningGraphData(pathId: string): { nodes: LearningGraphNode
 
   for (const lessonIds of moduleGroups.values()) {
     for (let i = 0; i < lessonIds.length - 1; i++) {
-      // Only add if not already present
       const exists = edges.some(e =>
         (e.from === lessonIds[i] && e.to === lessonIds[i + 1]) ||
         (e.from === lessonIds[i + 1] && e.to === lessonIds[i])
@@ -461,50 +457,49 @@ export function validateImport(data: unknown): { valid: boolean; error?: string 
   return { valid: true }
 }
 
-export function importLearningPath(data: ImportLearningPath): string {
-  let pathId = ''
+export async function importLearningPath(data: ImportLearningPath): Promise<string> {
+  const now = new Date().toISOString()
+  const pathId = generateId()
 
-  transaction(() => {
-    const now = new Date().toISOString()
+  const statements: Array<{ sql: string; params?: unknown[] }> = []
 
-    // Create path
-    pathId = generateId()
-    execute(
-      'INSERT INTO learning_paths (id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [pathId, data.title, data.description, now, now]
-    )
+  // Create path
+  statements.push({
+    sql: 'INSERT INTO learning_paths (id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    params: [pathId, data.title, data.description, now, now],
+  })
 
-    // Create modules and lessons
-    for (let mi = 0; mi < data.modules.length; mi++) {
-      const mod = data.modules[mi]
-      const moduleId = generateId()
-      execute(
-        'INSERT INTO learning_modules (id, path_id, title, description, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [moduleId, pathId, mod.title, mod.description || null, mi, now, now]
-      )
+  // Create modules and lessons
+  for (let mi = 0; mi < data.modules.length; mi++) {
+    const mod = data.modules[mi]
+    const moduleId = generateId()
+    statements.push({
+      sql: 'INSERT INTO learning_modules (id, path_id, title, description, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      params: [moduleId, pathId, mod.title, mod.description || null, mi, now, now],
+    })
 
-      for (let li = 0; li < mod.lessons.length; li++) {
-        const lesson = mod.lessons[li]
-        const lessonId = generateId()
-        execute(
-          `INSERT INTO lessons (id, module_id, title, subtitle, content, sort_order, status, estimated_minutes, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [lessonId, moduleId, lesson.title, lesson.subtitle || null, lesson.content, li, 'published', lesson.estimated_minutes || null, now, now]
-        )
+    for (let li = 0; li < mod.lessons.length; li++) {
+      const lesson = mod.lessons[li]
+      const lessonId = generateId()
+      statements.push({
+        sql: `INSERT INTO lessons (id, module_id, title, subtitle, content, sort_order, status, estimated_minutes, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [lessonId, moduleId, lesson.title, lesson.subtitle || null, lesson.content, li, 'published', lesson.estimated_minutes || null, now, now],
+      })
 
-        // Create terms
-        if (lesson.terms) {
-          for (const t of lesson.terms) {
-            const termId = generateId()
-            execute(
-              'INSERT INTO lesson_terms (id, lesson_id, term, definition, concept_id) VALUES (?, ?, ?, ?, ?)',
-              [termId, lessonId, t.term, t.definition, null]
-            )
-          }
+      if (lesson.terms) {
+        for (const t of lesson.terms) {
+          const termId = generateId()
+          statements.push({
+            sql: 'INSERT INTO lesson_terms (id, lesson_id, term, definition, concept_id) VALUES (?, ?, ?, ?, ?)',
+            params: [termId, lessonId, t.term, t.definition, null],
+          })
         }
       }
     }
-  })
+  }
+
+  await transaction(statements)
 
   return pathId
 }

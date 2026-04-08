@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/gen/schemas/
+
 # Claude Code worktrees
 .claude/worktrees/
 snap-dashboard.txt

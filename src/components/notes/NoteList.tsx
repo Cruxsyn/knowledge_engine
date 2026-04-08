@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react'
 import { useNotes } from '@/hooks/useNotes'
 import { NoteCard } from './NoteCard'
 import { Loader2, FileText } from 'lucide-react'
-import type { NoteType } from '@/types'
+import type { NoteType, AtomicNote } from '@/types'
 
 interface NoteListProps {
   viewMode: 'all' | NoteType
@@ -9,12 +10,15 @@ interface NoteListProps {
 
 export function NoteList({ viewMode }: NoteListProps) {
   const { notes, loading, error, getNotesByType } = useNotes()
+  const [filteredNotes, setFilteredNotes] = useState<AtomicNote[]>([])
 
-  let displayNotes = notes
+  useEffect(() => {
+    if (viewMode !== 'all') {
+      getNotesByType(viewMode).then(setFilteredNotes)
+    }
+  }, [viewMode, getNotesByType])
 
-  if (viewMode !== 'all') {
-    displayNotes = getNotesByType(viewMode)
-  }
+  const displayNotes = viewMode === 'all' ? notes : filteredNotes
 
   if (loading) {
     return (

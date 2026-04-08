@@ -9,11 +9,11 @@ export function useLearning() {
   const [paths, setPaths] = useState<LearningPath[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchPaths = useCallback(() => {
+  const fetchPaths = useCallback(async () => {
     if (!isDbReady) return
     try {
       setLoading(true)
-      setPaths(learningQueries.getAllPaths())
+      setPaths(await learningQueries.getAllPaths())
     } catch (err) {
       console.error('Error fetching learning paths:', err)
     } finally {
@@ -25,60 +25,60 @@ export function useLearning() {
     fetchPaths()
   }, [fetchPaths, refreshTrigger])
 
-  const getPathById = useCallback((id: string): LearningPath | null => {
+  const getPathById = useCallback(async (id: string): Promise<LearningPath | null> => {
     if (!isDbReady) return null
     try {
-      return learningQueries.getPathById(id)
+      return await learningQueries.getPathById(id)
     } catch (err) {
       console.error('Error getting path:', err)
       return null
     }
   }, [isDbReady])
 
-  const getModulesByPath = useCallback((pathId: string): LearningModule[] => {
+  const getModulesByPath = useCallback(async (pathId: string): Promise<LearningModule[]> => {
     if (!isDbReady) return []
     try {
-      return learningQueries.getModulesByPath(pathId)
+      return await learningQueries.getModulesByPath(pathId)
     } catch (err) {
       console.error('Error getting modules:', err)
       return []
     }
   }, [isDbReady])
 
-  const getLessonsByModule = useCallback((moduleId: string): Lesson[] => {
+  const getLessonsByModule = useCallback(async (moduleId: string): Promise<Lesson[]> => {
     if (!isDbReady) return []
     try {
-      return learningQueries.getLessonsByModule(moduleId)
+      return await learningQueries.getLessonsByModule(moduleId)
     } catch (err) {
       console.error('Error getting lessons:', err)
       return []
     }
   }, [isDbReady])
 
-  const getAllLessonsByPath = useCallback((pathId: string): Lesson[] => {
+  const getAllLessonsByPath = useCallback(async (pathId: string): Promise<Lesson[]> => {
     if (!isDbReady) return []
     try {
-      return learningQueries.getAllLessonsByPath(pathId)
+      return await learningQueries.getAllLessonsByPath(pathId)
     } catch (err) {
       console.error('Error getting all lessons:', err)
       return []
     }
   }, [isDbReady])
 
-  const getLessonById = useCallback((id: string): Lesson | null => {
+  const getLessonById = useCallback(async (id: string): Promise<Lesson | null> => {
     if (!isDbReady) return null
     try {
-      return learningQueries.getLessonById(id)
+      return await learningQueries.getLessonById(id)
     } catch (err) {
       console.error('Error getting lesson:', err)
       return null
     }
   }, [isDbReady])
 
-  const getTermsByLesson = useCallback((lessonId: string): LessonTerm[] => {
+  const getTermsByLesson = useCallback(async (lessonId: string): Promise<LessonTerm[]> => {
     if (!isDbReady) return []
     try {
-      return learningQueries.getTermsByLesson(lessonId)
+      return await learningQueries.getTermsByLesson(lessonId)
     } catch (err) {
       console.error('Error getting terms:', err)
       return []
@@ -86,46 +86,46 @@ export function useLearning() {
   }, [isDbReady])
 
   // Progress
-  const getProgress = useCallback((lessonId: string): LessonProgress | null => {
+  const getProgress = useCallback(async (lessonId: string): Promise<LessonProgress | null> => {
     if (!isDbReady) return null
     try {
-      return learningQueries.getProgress(lessonId)
+      return await learningQueries.getProgress(lessonId)
     } catch (err) {
       console.error('Error getting progress:', err)
       return null
     }
   }, [isDbReady])
 
-  const markLessonComplete = useCallback((lessonId: string): void => {
+  const markLessonComplete = useCallback(async (lessonId: string): Promise<void> => {
     try {
-      learningQueries.updateProgress(lessonId, { completed: true })
+      await learningQueries.updateProgress(lessonId, { completed: true })
     } catch (err) {
       console.error('Error marking lesson complete:', err)
     }
   }, [])
 
-  const saveScrollPosition = useCallback((lessonId: string, position: number): void => {
+  const saveScrollPosition = useCallback(async (lessonId: string, position: number): Promise<void> => {
     try {
-      learningQueries.updateProgress(lessonId, { scroll_position: position })
+      await learningQueries.updateProgress(lessonId, { scroll_position: position })
     } catch (err) {
       console.error('Error saving scroll position:', err)
     }
   }, [])
 
-  const getPathProgress = useCallback((pathId: string) => {
+  const getPathProgress = useCallback(async (pathId: string) => {
     if (!isDbReady) return { total: 0, completed: 0, percentage: 0 }
     try {
-      return learningQueries.getPathProgress(pathId)
+      return await learningQueries.getPathProgress(pathId)
     } catch (err) {
       console.error('Error getting path progress:', err)
       return { total: 0, completed: 0, percentage: 0 }
     }
   }, [isDbReady])
 
-  const getGraphData = useCallback((pathId: string): { nodes: LearningGraphNode[]; edges: LearningGraphEdge[] } => {
+  const getGraphData = useCallback(async (pathId: string): Promise<{ nodes: LearningGraphNode[]; edges: LearningGraphEdge[] }> => {
     if (!isDbReady) return { nodes: [], edges: [] }
     try {
-      return learningQueries.getLearningGraphData(pathId)
+      return await learningQueries.getLearningGraphData(pathId)
     } catch (err) {
       console.error('Error getting graph data:', err)
       return { nodes: [], edges: [] }

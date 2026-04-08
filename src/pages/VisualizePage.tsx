@@ -145,13 +145,18 @@ export function VisualizePage() {
   }, [notes, concepts, showNotes, showConcepts])
 
   // Generate edges based on note-concept relationships
+  const [graphEdgesData, setGraphEdgesData] = useState<{ from: string; to: string; relationship: string }[]>([])
+
+  useEffect(() => {
+    getGraphData().then(data => setGraphEdgesData(data.edges))
+  }, [getGraphData])
+
   const generateEdges = useMemo(() => {
     const edges: VisEdge[] = []
-    const graphData = getGraphData()
 
     // Concept-to-concept relationships
     if (showConcepts) {
-      graphData.edges.forEach(edge => {
+      graphEdgesData.forEach(edge => {
         edges.push({
           from: `concept-${edge.from}`,
           to: `concept-${edge.to}`,
@@ -176,7 +181,7 @@ export function VisualizePage() {
     }
 
     return edges
-  }, [notes, showNotes, showConcepts, getGraphData])
+  }, [notes, showNotes, showConcepts, graphEdgesData])
 
   // Initialize nodes
   useEffect(() => {

@@ -9,19 +9,19 @@ export function useCaptures() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const fetchCaptures = useCallback(() => {
+  const fetchCaptures = useCallback(async () => {
     if (!isDbReady) return
 
     try {
       setLoading(true)
       let data: Capture[]
-      
+
       if (captureStatusFilter === 'all') {
-        data = captureQueries.getAllCaptures()
+        data = await captureQueries.getAllCaptures()
       } else {
-        data = captureQueries.getCapturesByStatus(captureStatusFilter)
+        data = await captureQueries.getCapturesByStatus(captureStatusFilter)
       }
-      
+
       setCaptures(data)
       setError(null)
     } catch (err) {
@@ -36,9 +36,9 @@ export function useCaptures() {
     fetchCaptures()
   }, [fetchCaptures, refreshTrigger])
 
-  const createCapture = useCallback((data: CreateCapture): Capture | null => {
+  const createCapture = useCallback(async (data: CreateCapture): Promise<Capture | null> => {
     try {
-      const capture = captureQueries.createCapture(data)
+      const capture = await captureQueries.createCapture(data)
       fetchCaptures()
       return capture
     } catch (err) {
@@ -48,9 +48,9 @@ export function useCaptures() {
     }
   }, [fetchCaptures])
 
-  const updateCapture = useCallback((id: string, updates: Partial<Capture>): Capture | null => {
+  const updateCapture = useCallback(async (id: string, updates: Partial<Capture>): Promise<Capture | null> => {
     try {
-      const capture = captureQueries.updateCapture(id, updates)
+      const capture = await captureQueries.updateCapture(id, updates)
       fetchCaptures()
       return capture
     } catch (err) {
@@ -60,9 +60,9 @@ export function useCaptures() {
     }
   }, [fetchCaptures])
 
-  const updateStatus = useCallback((id: string, status: CaptureStatus): Capture | null => {
+  const updateStatus = useCallback(async (id: string, status: CaptureStatus): Promise<Capture | null> => {
     try {
-      const capture = captureQueries.updateCaptureStatus(id, status)
+      const capture = await captureQueries.updateCaptureStatus(id, status)
       fetchCaptures()
       return capture
     } catch (err) {
@@ -72,9 +72,9 @@ export function useCaptures() {
     }
   }, [fetchCaptures])
 
-  const deleteCapture = useCallback((id: string): boolean => {
+  const deleteCapture = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const success = captureQueries.deleteCapture(id)
+      const success = await captureQueries.deleteCapture(id)
       if (success) fetchCaptures()
       return success
     } catch (err) {
@@ -84,20 +84,20 @@ export function useCaptures() {
     }
   }, [fetchCaptures])
 
-  const searchCaptures = useCallback((query: string): Capture[] => {
+  const searchCaptures = useCallback(async (query: string): Promise<Capture[]> => {
     if (!isDbReady || !query.trim()) return []
     try {
-      return captureQueries.searchCaptures(query)
+      return await captureQueries.searchCaptures(query)
     } catch (err) {
       console.error('Error searching captures:', err)
       return []
     }
   }, [isDbReady])
 
-  const getCounts = useCallback(() => {
+  const getCounts = useCallback(async () => {
     if (!isDbReady) return null
     try {
-      return captureQueries.getCaptureCounts()
+      return await captureQueries.getCaptureCounts()
     } catch (err) {
       console.error('Error getting capture counts:', err)
       return null

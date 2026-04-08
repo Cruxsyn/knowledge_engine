@@ -18,19 +18,19 @@ export function useSearch() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
 
-  const search = useCallback((query: string) => {
+  const search = useCallback(async (query: string) => {
     if (!isDbReady || !query.trim()) {
       setResults([])
       return
     }
 
     setLoading(true)
-    
+
     try {
       const searchResults: SearchResult[] = []
-      
+
       // Search captures
-      const captures = captureQueries.searchCaptures(query)
+      const captures = await captureQueries.searchCaptures(query)
       for (const capture of captures) {
         searchResults.push({
           type: 'capture',
@@ -40,9 +40,9 @@ export function useSearch() {
           item: capture,
         })
       }
-      
+
       // Search notes
-      const notes = noteQueries.searchNotes(query)
+      const notes = await noteQueries.searchNotes(query)
       for (const note of notes) {
         searchResults.push({
           type: 'note',
@@ -52,9 +52,9 @@ export function useSearch() {
           item: note,
         })
       }
-      
+
       // Search concepts
-      const concepts = conceptQueries.searchConcepts(query)
+      const concepts = await conceptQueries.searchConcepts(query)
       for (const concept of concepts) {
         searchResults.push({
           type: 'concept',
@@ -64,7 +64,7 @@ export function useSearch() {
           item: concept,
         })
       }
-      
+
       setResults(searchResults)
     } catch (err) {
       console.error('Search error:', err)

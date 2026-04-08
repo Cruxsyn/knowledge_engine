@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -42,12 +42,9 @@ export function ShareDialog() {
   } = useShareStore()
 
   // Get all links for sharing
-  const links = useMemo(() => {
-    try {
-      return getAllLinks()
-    } catch {
-      return []
-    }
+  const [links, setLinks] = useState<Awaited<ReturnType<typeof getAllLinks>>>([])
+  useEffect(() => {
+    getAllLinks().then(setLinks).catch(() => setLinks([]))
   }, [])
 
   // Calculate estimated size

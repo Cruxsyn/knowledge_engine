@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { useConcepts } from '@/hooks/useConcepts'
 import { Button } from '@/components/ui/button'
@@ -28,11 +28,17 @@ export function ConceptDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [showGraph, setShowGraph] = useState(false)
+  const [fullConcept, setFullConcept] = useState<import('@/types').Concept | null>(null)
+
+  useEffect(() => {
+    if (selectedConcept) {
+      getConceptById(selectedConcept.id).then(setFullConcept)
+    }
+  }, [selectedConcept, getConceptById])
 
   if (!selectedConcept) return null
 
   // Get full concept with relationships
-  const fullConcept = getConceptById(selectedConcept.id)
   const concept = fullConcept || selectedConcept
 
   const handleClose = () => {
@@ -146,8 +152,8 @@ export function ConceptDetail() {
                   key={prereq.id} 
                   variant="outline"
                   className="cursor-pointer hover:bg-ash-stone/50"
-                  onClick={() => {
-                    const full = getConceptById(prereq.id)
+                  onClick={async () => {
+                    const full = await getConceptById(prereq.id)
                     if (full) setSelectedConcept(full)
                   }}
                 >
@@ -170,8 +176,8 @@ export function ConceptDetail() {
                   key={dep.id} 
                   variant="outline"
                   className="cursor-pointer hover:bg-ash-stone/50"
-                  onClick={() => {
-                    const full = getConceptById(dep.id)
+                  onClick={async () => {
+                    const full = await getConceptById(dep.id)
                     if (full) setSelectedConcept(full)
                   }}
                 >

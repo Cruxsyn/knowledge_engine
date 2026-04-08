@@ -87,7 +87,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           confidence,
         })
       } else {
-        const newNote = createNote({
+        const newNote = await createNote({
           title: title.trim(),
           note_type: noteType,
           content: content as NoteContent,

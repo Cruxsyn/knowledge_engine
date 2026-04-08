@@ -10,19 +10,19 @@ export function useConcepts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const fetchConcepts = useCallback(() => {
+  const fetchConcepts = useCallback(async () => {
     if (!isDbReady) return
 
     try {
       setLoading(true)
       let data: Concept[]
-      
+
       if (masteryFilter === 'all') {
-        data = conceptQueries.getAllConcepts()
+        data = await conceptQueries.getAllConcepts()
       } else {
-        data = conceptQueries.getConceptsByMastery(masteryFilter)
+        data = await conceptQueries.getConceptsByMastery(masteryFilter)
       }
-      
+
       setConcepts(data)
       setError(null)
     } catch (err) {
@@ -37,19 +37,19 @@ export function useConcepts() {
     fetchConcepts()
   }, [fetchConcepts, refreshTrigger])
 
-  const getConceptById = useCallback((id: string): Concept | null => {
+  const getConceptById = useCallback(async (id: string): Promise<Concept | null> => {
     if (!isDbReady) return null
     try {
-      return conceptQueries.getConceptById(id)
+      return await conceptQueries.getConceptById(id)
     } catch (err) {
       console.error('Error getting concept:', err)
       return null
     }
   }, [isDbReady])
 
-  const createConcept = useCallback((data: CreateConcept): Concept | null => {
+  const createConcept = useCallback(async (data: CreateConcept): Promise<Concept | null> => {
     try {
-      const concept = conceptQueries.createConcept(data)
+      const concept = await conceptQueries.createConcept(data)
       fetchConcepts()
       return concept
     } catch (err) {
@@ -59,9 +59,9 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const updateConcept = useCallback((id: string, updates: Partial<Concept>): Concept | null => {
+  const updateConcept = useCallback(async (id: string, updates: Partial<Concept>): Promise<Concept | null> => {
     try {
-      const concept = conceptQueries.updateConcept(id, updates)
+      const concept = await conceptQueries.updateConcept(id, updates)
       fetchConcepts()
       return concept
     } catch (err) {
@@ -71,9 +71,9 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const updateMastery = useCallback((id: string, mastery: MasteryLevel): Concept | null => {
+  const updateMastery = useCallback(async (id: string, mastery: MasteryLevel): Promise<Concept | null> => {
     try {
-      const concept = conceptQueries.updateMastery(id, mastery)
+      const concept = await conceptQueries.updateMastery(id, mastery)
       fetchConcepts()
       return concept
     } catch (err) {
@@ -83,9 +83,9 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const deleteConcept = useCallback((id: string): boolean => {
+  const deleteConcept = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const success = conceptQueries.deleteConcept(id)
+      const success = await conceptQueries.deleteConcept(id)
       if (success) fetchConcepts()
       return success
     } catch (err) {
@@ -95,9 +95,9 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const createLink = useCallback((data: CreateLink): Link | null => {
+  const createLink = useCallback(async (data: CreateLink): Promise<Link | null> => {
     try {
-      const link = linkQueries.createLink(data)
+      const link = await linkQueries.createLink(data)
       fetchConcepts()
       return link
     } catch (err) {
@@ -107,9 +107,9 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const deleteLink = useCallback((id: string): boolean => {
+  const deleteLink = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const success = linkQueries.deleteLink(id)
+      const success = await linkQueries.deleteLink(id)
       if (success) fetchConcepts()
       return success
     } catch (err) {
@@ -119,60 +119,60 @@ export function useConcepts() {
     }
   }, [fetchConcepts])
 
-  const getConceptLinks = useCallback((conceptId: string): Link[] => {
+  const getConceptLinks = useCallback(async (conceptId: string): Promise<Link[]> => {
     if (!isDbReady) return []
     try {
-      return conceptQueries.getConceptLinks(conceptId)
+      return await conceptQueries.getConceptLinks(conceptId)
     } catch (err) {
       console.error('Error getting concept links:', err)
       return []
     }
   }, [isDbReady])
 
-  const searchConcepts = useCallback((query: string): Concept[] => {
+  const searchConcepts = useCallback(async (query: string): Promise<Concept[]> => {
     if (!isDbReady || !query.trim()) return []
     try {
-      return conceptQueries.searchConcepts(query)
+      return await conceptQueries.searchConcepts(query)
     } catch (err) {
       console.error('Error searching concepts:', err)
       return []
     }
   }, [isDbReady])
 
-  const getCounts = useCallback(() => {
+  const getCounts = useCallback(async () => {
     if (!isDbReady) return null
     try {
-      return conceptQueries.getConceptCounts()
+      return await conceptQueries.getConceptCounts()
     } catch (err) {
       console.error('Error getting concept counts:', err)
       return null
     }
   }, [isDbReady])
 
-  const getConceptsWithoutPrerequisites = useCallback((): Concept[] => {
+  const getConceptsWithoutPrerequisites = useCallback(async (): Promise<Concept[]> => {
     if (!isDbReady) return []
     try {
-      return conceptQueries.getConceptsWithoutPrerequisites()
+      return await conceptQueries.getConceptsWithoutPrerequisites()
     } catch (err) {
       console.error('Error getting concepts without prerequisites:', err)
       return []
     }
   }, [isDbReady])
 
-  const getConceptsWithoutExamples = useCallback((): Concept[] => {
+  const getConceptsWithoutExamples = useCallback(async (): Promise<Concept[]> => {
     if (!isDbReady) return []
     try {
-      return conceptQueries.getConceptsWithoutExamples()
+      return await conceptQueries.getConceptsWithoutExamples()
     } catch (err) {
       console.error('Error getting concepts without examples:', err)
       return []
     }
   }, [isDbReady])
 
-  const getGraphData = useCallback(() => {
+  const getGraphData = useCallback(async () => {
     if (!isDbReady) return { nodes: [], edges: [] }
     try {
-      return linkQueries.getGraphData()
+      return await linkQueries.getGraphData()
     } catch (err) {
       console.error('Error getting graph data:', err)
       return { nodes: [], edges: [] }

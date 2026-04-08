@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useConcepts } from '@/hooks/useConcepts'
 import { useAppStore } from '@/stores/appStore'
 
@@ -29,6 +29,11 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
   const animationRef = useRef<number | undefined>(undefined)
   const nodesRef = useRef<Node[]>([])
   const edgesRef = useRef<Edge[]>([])
+  const [graphEdges, setGraphEdges] = useState<Edge[]>([])
+
+  useEffect(() => {
+    getGraphData().then(data => setGraphEdges(data.edges))
+  }, [getGraphData])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -47,9 +52,6 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
     }
     updateSize()
 
-    // Get graph data
-    const graphData = getGraphData()
-    
     // Create nodes with positions
     const centerX = canvas.width / 2
     const centerY = canvas.height / 2
@@ -68,7 +70,7 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
       }
     })
 
-    edgesRef.current = graphData.edges
+    edgesRef.current = graphEdges
 
     // Simple force-directed layout
     const simulate = () => {
@@ -194,7 +196,7 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
     animateWithLimit()
 
     // Click handler
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = async (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
@@ -203,7 +205,7 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
         const dx = x - node.x
         const dy = y - node.y
         if (dx * dx + dy * dy < 144) { // 12^2
-          const concept = getConceptById(node.id)
+          const concept = await getConceptById(node.id)
           if (concept) {
             setSelectedConcept(concept)
           }
@@ -220,7 +222,7 @@ export function ConceptGraph({ conceptId }: ConceptGraphProps) {
       }
       canvas.removeEventListener('click', handleClick)
     }
-  }, [concepts, conceptId, getGraphData, getConceptById, setSelectedConcept])
+  }, [concepts, conceptId, graphEdges, getConceptById, setSelectedConcept])
 
   if (concepts.length === 0) {
     return (

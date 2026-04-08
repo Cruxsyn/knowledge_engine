@@ -110,7 +110,7 @@ export function BranchTerminal({ parentNode, onSave, onCancel }: BranchTerminalP
 
   const getTypeConfig = (noteType: NoteType) => NOTE_TYPE_CONFIGS.find(c => c.value === noteType)
 
-  const processCommand = (cmd: string) => {
+  const processCommand = async (cmd: string) => {
     const trimmed = cmd.trim()
     if (!trimmed) return
 
@@ -215,7 +215,7 @@ export function BranchTerminal({ parentNode, onSave, onCancel }: BranchTerminalP
           return
         }
 
-        const newNote = createNote({
+        const newNote = await createNote({
           title: draftNote.title,
           note_type: draftNote.note_type,
           content: draftNote.content as any,

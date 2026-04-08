@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus } from 'lucide-react'
 import { useAppStore } from '@/stores/appStore'
 import { useNotes } from '@/hooks/useNotes'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { NoteType } from '@/types'
 
 type ViewMode = 'all' | NoteType
@@ -27,7 +27,11 @@ const noteTypeTabs: { value: ViewMode; label: string }[] = [
 export function NotesPage() {
   const { selectedNote, setSelectedNote } = useAppStore()
   const { getCounts } = useNotes()
-  const counts = getCounts()
+  const [counts, setCounts] = useState<{ total: number; byType: Record<NoteType, number> } | null>(null)
+
+  useEffect(() => {
+    getCounts().then(setCounts)
+  }, [getCounts])
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [isCreating, setIsCreating] = useState(false)
 

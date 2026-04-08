@@ -33,7 +33,7 @@ function noteToMarkdown(note: AtomicNote): string {
   return md
 }
 
-function conceptToMarkdown(concept: Concept): string {
+async function conceptToMarkdown(concept: Concept): Promise<string> {
   let md = `# ${concept.name}\n\n`
   md += `## Definition\n${concept.definition}\n\n`
   
@@ -46,7 +46,7 @@ function conceptToMarkdown(concept: Concept): string {
   }
   
   // Get full concept with relationships
-  const fullConcept = getConceptById(concept.id)
+  const fullConcept = await getConceptById(concept.id)
   
   if (fullConcept?.prerequisites && fullConcept.prerequisites.length > 0) {
     md += `## Prerequisites\n`
@@ -204,7 +204,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export async function exportNotesAsMarkdown() {
-  const notes = getAllNotes()
+  const notes = await getAllNotes()
   const files = notes.map(note => ({
     path: `notes/${sanitizeFilename(note.title)}.md`,
     content: noteToMarkdown(note),
@@ -221,11 +221,11 @@ export async function exportNotesAsMarkdown() {
 }
 
 export async function exportConceptsAsMarkdown() {
-  const concepts = getAllConcepts()
-  const files = concepts.map(concept => ({
+  const concepts = await getAllConcepts()
+  const files = await Promise.all(concepts.map(async concept => ({
     path: `concepts/${sanitizeFilename(concept.name)}.md`,
-    content: conceptToMarkdown(concept),
-  }))
+    content: await conceptToMarkdown(concept),
+  })))
   
   if (files.length === 0) {
     alert('No concepts to export')
@@ -241,7 +241,7 @@ export async function exportAllAsMarkdown() {
   const files: Array<{ path: string; content: string }> = []
   
   // Export captures
-  const captures = getAllCaptures()
+  const captures = await getAllCaptures()
   for (const capture of captures) {
     files.push({
       path: `inbox/${sanitizeFilename(capture.title)}.md`,
@@ -250,7 +250,7 @@ export async function exportAllAsMarkdown() {
   }
   
   // Export notes
-  const notes = getAllNotes()
+  const notes = await getAllNotes()
   for (const note of notes) {
     files.push({
       path: `notes/${sanitizeFilename(note.title)}.md`,
@@ -259,11 +259,11 @@ export async function exportAllAsMarkdown() {
   }
   
   // Export concepts
-  const concepts = getAllConcepts()
+  const concepts = await getAllConcepts()
   for (const concept of concepts) {
     files.push({
       path: `concepts/${sanitizeFilename(concept.name)}.md`,
-      content: conceptToMarkdown(concept),
+      content: await conceptToMarkdown(concept),
     })
   }
   

@@ -30,7 +30,6 @@ interface ConceptRow {
 }
 
 function parseContent(row: NoteRow): NoteContent {
-  // Try to parse content as JSON
   if (row.content && row.content !== '{}') {
     try {
       return JSON.parse(row.content)
@@ -38,8 +37,7 @@ function parseContent(row: NoteRow): NoteContent {
       // Fall through to legacy handling
     }
   }
-  
-  // Legacy migration: convert old fields to new content format
+
   if (row.summary || row.key_claim) {
     return {
       summary: row.summary || '',
@@ -47,7 +45,7 @@ function parseContent(row: NoteRow): NoteContent {
       example: row.example || undefined,
     }
   }
-  
+
   return { summary: '', key_claim: '' }
 }
 
@@ -66,20 +64,18 @@ function rowToNote(row: NoteRow, concepts?: Concept[]): AtomicNote {
   }
 }
 
-export function getAllNotes(): AtomicNote[] {
-  const rows = query<NoteRow>(`
+export async function getAllNotes(): Promise<AtomicNote[]> {
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
     ORDER BY created_at DESC
   `)
 
-  // Get all note-concept relationships in one query
-  const conceptLinks = query<{ note_id: string; concept_id: string; name: string; definition: string; intuition: string | null; pitfalls: string | null; mastery: string; created_at: string; updated_at: string }>(`
+  const conceptLinks = await query<{ note_id: string; concept_id: string; name: string; definition: string; intuition: string | null; pitfalls: string | null; mastery: string; created_at: string; updated_at: string }>(`
     SELECT cn.note_id, c.id as concept_id, c.name, c.definition, c.intuition, c.pitfalls, c.mastery, c.created_at, c.updated_at
     FROM concept_notes cn
     INNER JOIN concepts c ON c.id = cn.concept_id
   `)
 
-  // Group concepts by note_id
   const conceptsByNoteId = new Map<string, Concept[]>()
   for (const link of conceptLinks) {
     const concepts = conceptsByNoteId.get(link.note_id) || []
@@ -99,20 +95,19 @@ export function getAllNotes(): AtomicNote[] {
   return rows.map(row => rowToNote(row, conceptsByNoteId.get(row.id)))
 }
 
-export function getNoteById(id: string): AtomicNote | null {
-  const row = queryOne<NoteRow>(`
+export async function getNoteById(id: string): Promise<AtomicNote | null> {
+  const row = await queryOne<NoteRow>(`
     SELECT * FROM atomic_notes WHERE id = ?
   `, [id])
-  
+
   if (!row) return null
-  
-  // Get linked concepts
-  const conceptRows = query<ConceptRow>(`
+
+  const conceptRows = await query<ConceptRow>(`
     SELECT c.* FROM concepts c
     INNER JOIN concept_notes cn ON c.id = cn.concept_id
     WHERE cn.note_id = ?
   `, [id])
-  
+
   const concepts: Concept[] = conceptRows.map(c => ({
     id: c.id,
     name: c.name,
@@ -123,12 +118,12 @@ export function getNoteById(id: string): AtomicNote | null {
     created_at: c.created_at,
     updated_at: c.updated_at,
   }))
-  
+
   return rowToNote(row, concepts)
 }
 
-export function getNotesByConfidence(minConfidence: number, maxConfidence: number = 5): AtomicNote[] {
-  const rows = query<NoteRow>(`
+export async function getNotesByConfidence(minConfidence: number, maxConfidence: number = 5): Promise<AtomicNote[]> {
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
     WHERE confidence >= ? AND confidence <= ?
     ORDER BY confidence ASC, created_at DESC
@@ -136,8 +131,8 @@ export function getNotesByConfidence(minConfidence: number, maxConfidence: numbe
   return rows.map(row => rowToNote(row))
 }
 
-export function getRecentNotes(limit: number = 10): AtomicNote[] {
-  const rows = query<NoteRow>(`
+export async function getRecentNotes(limit: number = 10): Promise<AtomicNote[]> {
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
     ORDER BY created_at DESC
     LIMIT ?
@@ -145,50 +140,52 @@ export function getRecentNotes(limit: number = 10): AtomicNote[] {
   return rows.map(row => rowToNote(row))
 }
 
-export function getNotesNeedingReview(days: number = 7): AtomicNote[] {
-  const rows = query<NoteRow>(`
+export async function getNotesNeedingReview(days: number = 7): Promise<AtomicNote[]> {
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
-    WHERE last_reviewed IS NULL 
+    WHERE last_reviewed IS NULL
        OR datetime(last_reviewed) < datetime('now', '-' || ? || ' days')
     ORDER BY last_reviewed ASC NULLS FIRST, created_at ASC
   `, [days])
   return rows.map(row => rowToNote(row))
 }
 
-export function createNote(data: CreateAtomicNote): AtomicNote {
+export async function createNote(data: CreateAtomicNote): Promise<AtomicNote> {
   const id = generateId()
   const now = new Date().toISOString()
   const noteType = data.note_type || 'other'
   const contentJson = JSON.stringify(data.content)
-  
-  transaction(() => {
-    execute(`
-      INSERT INTO atomic_notes (id, title, note_type, content, confidence, source_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, data.title, noteType, contentJson, data.confidence, data.source_id || null, now, now])
-    
-    // Link concepts if provided
-    if (data.concept_ids && data.concept_ids.length > 0) {
-      for (const conceptId of data.concept_ids) {
-        execute(`
-          INSERT OR IGNORE INTO concept_notes (concept_id, note_id)
-          VALUES (?, ?)
-        `, [conceptId, id])
-      }
+
+  const statements: Array<{ sql: string; params?: unknown[] }> = [
+    {
+      sql: `INSERT INTO atomic_notes (id, title, note_type, content, confidence, source_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [id, data.title, noteType, contentJson, data.confidence, data.source_id || null, now, now],
+    },
+  ]
+
+  if (data.concept_ids && data.concept_ids.length > 0) {
+    for (const conceptId of data.concept_ids) {
+      statements.push({
+        sql: `INSERT OR IGNORE INTO concept_notes (concept_id, note_id) VALUES (?, ?)`,
+        params: [conceptId, id],
+      })
     }
-  })
-  
-  return getNoteById(id)!
+  }
+
+  await transaction(statements)
+
+  return (await getNoteById(id))!
 }
 
-export function updateNote(id: string, updates: Partial<Omit<AtomicNote, 'id' | 'created_at' | 'concepts'>>): AtomicNote | null {
-  const existing = getNoteById(id)
+export async function updateNote(id: string, updates: Partial<Omit<AtomicNote, 'id' | 'created_at' | 'concepts'>>): Promise<AtomicNote | null> {
+  const existing = await getNoteById(id)
   if (!existing) return null
-  
+
   const now = new Date().toISOString()
   const fields: string[] = ['updated_at = ?']
   const values: (string | number | null)[] = [now]
-  
+
   if (updates.title !== undefined) {
     fields.push('title = ?')
     values.push(updates.title)
@@ -209,42 +206,42 @@ export function updateNote(id: string, updates: Partial<Omit<AtomicNote, 'id' | 
     fields.push('last_reviewed = ?')
     values.push(updates.last_reviewed)
   }
-  
+
   values.push(id)
-  execute(`UPDATE atomic_notes SET ${fields.join(', ')} WHERE id = ?`, values)
-  
+  await execute(`UPDATE atomic_notes SET ${fields.join(', ')} WHERE id = ?`, values)
+
   return getNoteById(id)
 }
 
-export function markNoteReviewed(id: string): AtomicNote | null {
+export async function markNoteReviewed(id: string): Promise<AtomicNote | null> {
   return updateNote(id, { last_reviewed: new Date().toISOString() })
 }
 
-export function deleteNote(id: string): boolean {
-  const existing = getNoteById(id)
+export async function deleteNote(id: string): Promise<boolean> {
+  const existing = await getNoteById(id)
   if (!existing) return false
-  
-  execute('DELETE FROM atomic_notes WHERE id = ?', [id])
+
+  await execute('DELETE FROM atomic_notes WHERE id = ?', [id])
   return true
 }
 
-export function linkNoteToConcept(noteId: string, conceptId: string): void {
-  execute(`
+export async function linkNoteToConcept(noteId: string, conceptId: string): Promise<void> {
+  await execute(`
     INSERT OR IGNORE INTO concept_notes (concept_id, note_id)
     VALUES (?, ?)
   `, [conceptId, noteId])
 }
 
-export function unlinkNoteFromConcept(noteId: string, conceptId: string): void {
-  execute(`
+export async function unlinkNoteFromConcept(noteId: string, conceptId: string): Promise<void> {
+  await execute(`
     DELETE FROM concept_notes
     WHERE concept_id = ? AND note_id = ?
   `, [conceptId, noteId])
 }
 
-export function searchNotes(searchTerm: string): AtomicNote[] {
+export async function searchNotes(searchTerm: string): Promise<AtomicNote[]> {
   const pattern = `%${searchTerm}%`
-  const rows = query<NoteRow>(`
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
     WHERE title LIKE ?
        OR content LIKE ?
@@ -253,8 +250,8 @@ export function searchNotes(searchTerm: string): AtomicNote[] {
   return rows.map(row => rowToNote(row))
 }
 
-export function getNotesByType(noteType: NoteType): AtomicNote[] {
-  const rows = query<NoteRow>(`
+export async function getNotesByType(noteType: NoteType): Promise<AtomicNote[]> {
+  const rows = await query<NoteRow>(`
     SELECT * FROM atomic_notes
     WHERE note_type = ?
     ORDER BY created_at DESC
@@ -262,10 +259,11 @@ export function getNotesByType(noteType: NoteType): AtomicNote[] {
   return rows.map(row => rowToNote(row))
 }
 
-export function getNoteCounts(): { total: number; byType: Record<NoteType, number> } {
-  const total = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM atomic_notes')?.count || 0
+export async function getNoteCounts(): Promise<{ total: number; byType: Record<NoteType, number> }> {
+  const totalRow = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM atomic_notes')
+  const total = totalRow?.count || 0
 
-  const typeCountRows = query<{ note_type: string; count: number }>(`
+  const typeCountRows = await query<{ note_type: string; count: number }>(`
     SELECT note_type, COUNT(*) as count FROM atomic_notes GROUP BY note_type
   `)
 

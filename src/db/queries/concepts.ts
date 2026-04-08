@@ -54,16 +54,16 @@ function rowToConcept(row: ConceptRow): Concept {
   }
 }
 
-export function getAllConcepts(): Concept[] {
-  const rows = query<ConceptRow>(`
+export async function getAllConcepts(): Promise<Concept[]> {
+  const rows = await query<ConceptRow>(`
     SELECT * FROM concepts
     ORDER BY name ASC
   `)
   return rows.map(rowToConcept)
 }
 
-export function getConceptsByMastery(mastery: MasteryLevel): Concept[] {
-  const rows = query<ConceptRow>(`
+export async function getConceptsByMastery(mastery: MasteryLevel): Promise<Concept[]> {
+  const rows = await query<ConceptRow>(`
     SELECT * FROM concepts
     WHERE mastery = ?
     ORDER BY name ASC
@@ -71,33 +71,33 @@ export function getConceptsByMastery(mastery: MasteryLevel): Concept[] {
   return rows.map(rowToConcept)
 }
 
-export function getConceptById(id: string): Concept | null {
-  const row = queryOne<ConceptRow>(`
+export async function getConceptById(id: string): Promise<Concept | null> {
+  const row = await queryOne<ConceptRow>(`
     SELECT * FROM concepts WHERE id = ?
   `, [id])
-  
+
   if (!row) return null
-  
+
   const concept = rowToConcept(row)
-  
+
   // Get prerequisites (concepts this depends on)
-  const prereqRows = query<ConceptRow>(`
+  const prereqRows = await query<ConceptRow>(`
     SELECT c.* FROM concepts c
     INNER JOIN links l ON c.id = l.target_id
     WHERE l.source_id = ? AND l.relationship IN ('prerequisite_of', 'depends_on')
   `, [id])
   concept.prerequisites = prereqRows.map(rowToConcept)
-  
+
   // Get dependents (concepts that depend on this)
-  const dependentRows = query<ConceptRow>(`
+  const dependentRows = await query<ConceptRow>(`
     SELECT c.* FROM concepts c
     INNER JOIN links l ON c.id = l.source_id
     WHERE l.target_id = ? AND l.relationship IN ('prerequisite_of', 'depends_on')
   `, [id])
   concept.dependents = dependentRows.map(rowToConcept)
-  
+
   // Get linked notes
-  const noteRows = query<NoteRow>(`
+  const noteRows = await query<NoteRow>(`
     SELECT n.* FROM atomic_notes n
     INNER JOIN concept_notes cn ON n.id = cn.note_id
     WHERE cn.concept_id = ?
@@ -112,50 +112,54 @@ export function getConceptById(id: string): Concept | null {
     updated_at: n.updated_at,
     last_reviewed: n.last_reviewed || undefined,
   }))
-  
+
   return concept
 }
 
-export function getConceptByName(name: string): Concept | null {
-  const row = queryOne<ConceptRow>(`
+export async function getConceptByName(name: string): Promise<Concept | null> {
+  const row = await queryOne<ConceptRow>(`
     SELECT * FROM concepts WHERE name = ?
   `, [name])
   return row ? rowToConcept(row) : null
 }
 
-export function createConcept(data: CreateConcept): Concept {
+export async function createConcept(data: CreateConcept): Promise<Concept> {
   const id = generateId()
   const now = new Date().toISOString()
-  
-  transaction(() => {
-    execute(`
-      INSERT INTO concepts (id, name, definition, intuition, pitfalls, mastery, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 'unknown', ?, ?)
-    `, [id, data.name, data.definition, data.intuition || null, data.pitfalls || null, now, now])
-    
-    // Create prerequisite links if provided
-    if (data.prerequisite_ids && data.prerequisite_ids.length > 0) {
-      for (const prereqId of data.prerequisite_ids) {
-        const linkId = generateId()
-        execute(`
-          INSERT INTO links (id, source_id, target_id, relationship, created_at)
-          VALUES (?, ?, ?, 'depends_on', ?)
-        `, [linkId, id, prereqId, now])
-      }
+
+  const statements: Array<{ sql: string; params?: unknown[] }> = [
+    {
+      sql: `INSERT INTO concepts (id, name, definition, intuition, pitfalls, mastery, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'unknown', ?, ?)`,
+      params: [id, data.name, data.definition, data.intuition || null, data.pitfalls || null, now, now],
+    },
+  ]
+
+  // Create prerequisite links if provided
+  if (data.prerequisite_ids && data.prerequisite_ids.length > 0) {
+    for (const prereqId of data.prerequisite_ids) {
+      const linkId = generateId()
+      statements.push({
+        sql: `INSERT INTO links (id, source_id, target_id, relationship, created_at)
+              VALUES (?, ?, ?, 'depends_on', ?)`,
+        params: [linkId, id, prereqId, now],
+      })
     }
-  })
-  
-  return getConceptById(id)!
+  }
+
+  await transaction(statements)
+
+  return (await getConceptById(id))!
 }
 
-export function updateConcept(id: string, updates: Partial<Omit<Concept, 'id' | 'created_at' | 'prerequisites' | 'dependents' | 'notes'>>): Concept | null {
-  const existing = getConceptById(id)
+export async function updateConcept(id: string, updates: Partial<Omit<Concept, 'id' | 'created_at' | 'prerequisites' | 'dependents' | 'notes'>>): Promise<Concept | null> {
+  const existing = await getConceptById(id)
   if (!existing) return null
-  
+
   const now = new Date().toISOString()
   const fields: string[] = ['updated_at = ?']
   const values: (string | number | null)[] = [now]
-  
+
   if (updates.name !== undefined) {
     fields.push('name = ?')
     values.push(updates.name)
@@ -176,32 +180,32 @@ export function updateConcept(id: string, updates: Partial<Omit<Concept, 'id' | 
     fields.push('mastery = ?')
     values.push(updates.mastery)
   }
-  
+
   values.push(id)
-  execute(`UPDATE concepts SET ${fields.join(', ')} WHERE id = ?`, values)
-  
+  await execute(`UPDATE concepts SET ${fields.join(', ')} WHERE id = ?`, values)
+
   return getConceptById(id)
 }
 
-export function updateMastery(id: string, mastery: MasteryLevel): Concept | null {
+export async function updateMastery(id: string, mastery: MasteryLevel): Promise<Concept | null> {
   return updateConcept(id, { mastery })
 }
 
-export function deleteConcept(id: string): boolean {
-  const existing = getConceptById(id)
+export async function deleteConcept(id: string): Promise<boolean> {
+  const existing = await getConceptById(id)
   if (!existing) return false
-  
-  execute('DELETE FROM concepts WHERE id = ?', [id])
+
+  await execute('DELETE FROM concepts WHERE id = ?', [id])
   return true
 }
 
-export function getConceptLinks(conceptId: string): Link[] {
-  const rows = query<LinkRow>(`
+export async function getConceptLinks(conceptId: string): Promise<Link[]> {
+  const rows = await query<LinkRow>(`
     SELECT * FROM links
     WHERE source_id = ? OR target_id = ?
     ORDER BY created_at DESC
   `, [conceptId, conceptId])
-  
+
   return rows.map(row => ({
     id: row.id,
     source_id: row.source_id,
@@ -212,9 +216,9 @@ export function getConceptLinks(conceptId: string): Link[] {
   }))
 }
 
-export function searchConcepts(searchTerm: string): Concept[] {
+export async function searchConcepts(searchTerm: string): Promise<Concept[]> {
   const pattern = `%${searchTerm}%`
-  const rows = query<ConceptRow>(`
+  const rows = await query<ConceptRow>(`
     SELECT * FROM concepts
     WHERE name LIKE ?
        OR definition LIKE ?
@@ -225,33 +229,33 @@ export function searchConcepts(searchTerm: string): Concept[] {
   return rows.map(rowToConcept)
 }
 
-export function getConceptCounts(): Record<MasteryLevel, number> {
-  const results = query<{ mastery: string; count: number }>(`
+export async function getConceptCounts(): Promise<Record<MasteryLevel, number>> {
+  const results = await query<{ mastery: string; count: number }>(`
     SELECT mastery, COUNT(*) as count
     FROM concepts
     GROUP BY mastery
   `)
-  
+
   const counts: Record<MasteryLevel, number> = {
     unknown: 0,
     learning: 0,
     solid: 0,
     teachable: 0,
   }
-  
+
   for (const row of results) {
     counts[row.mastery as MasteryLevel] = row.count
   }
-  
+
   return counts
 }
 
-export function getConceptsWithoutPrerequisites(): Concept[] {
-  const rows = query<ConceptRow>(`
+export async function getConceptsWithoutPrerequisites(): Promise<Concept[]> {
+  const rows = await query<ConceptRow>(`
     SELECT c.* FROM concepts c
     WHERE NOT EXISTS (
-      SELECT 1 FROM links l 
-      WHERE l.source_id = c.id 
+      SELECT 1 FROM links l
+      WHERE l.source_id = c.id
       AND l.relationship IN ('prerequisite_of', 'depends_on')
     )
     ORDER BY name ASC
@@ -259,8 +263,8 @@ export function getConceptsWithoutPrerequisites(): Concept[] {
   return rows.map(rowToConcept)
 }
 
-export function getConceptsWithoutExamples(): Concept[] {
-  const rows = query<ConceptRow>(`
+export async function getConceptsWithoutExamples(): Promise<Concept[]> {
+  const rows = await query<ConceptRow>(`
     SELECT c.* FROM concepts c
     WHERE NOT EXISTS (
       SELECT 1 FROM concept_notes cn WHERE cn.concept_id = c.id

@@ -47,8 +47,8 @@ function rowToCapture(row: CaptureRow): Capture {
   return capture
 }
 
-export function getAllCaptures(): Capture[] {
-  const rows = query<CaptureRow>(`
+export async function getAllCaptures(): Promise<Capture[]> {
+  const rows = await query<CaptureRow>(`
     SELECT c.*, s.url as source_url, s.title as source_title, s.type as source_type
     FROM captures c
     LEFT JOIN sources s ON c.source_id = s.id
@@ -57,8 +57,8 @@ export function getAllCaptures(): Capture[] {
   return rows.map(rowToCapture)
 }
 
-export function getCapturesByStatus(status: CaptureStatus): Capture[] {
-  const rows = query<CaptureRow>(`
+export async function getCapturesByStatus(status: CaptureStatus): Promise<Capture[]> {
+  const rows = await query<CaptureRow>(`
     SELECT c.*, s.url as source_url, s.title as source_title, s.type as source_type
     FROM captures c
     LEFT JOIN sources s ON c.source_id = s.id
@@ -68,8 +68,8 @@ export function getCapturesByStatus(status: CaptureStatus): Capture[] {
   return rows.map(rowToCapture)
 }
 
-export function getCapturesByPriority(priority: Priority): Capture[] {
-  const rows = query<CaptureRow>(`
+export async function getCapturesByPriority(priority: Priority): Promise<Capture[]> {
+  const rows = await query<CaptureRow>(`
     SELECT c.*, s.url as source_url, s.title as source_title, s.type as source_type
     FROM captures c
     LEFT JOIN sources s ON c.source_id = s.id
@@ -79,8 +79,8 @@ export function getCapturesByPriority(priority: Priority): Capture[] {
   return rows.map(rowToCapture)
 }
 
-export function getCaptureById(id: string): Capture | null {
-  const row = queryOne<CaptureRow>(`
+export async function getCaptureById(id: string): Promise<Capture | null> {
+  const row = await queryOne<CaptureRow>(`
     SELECT c.*, s.url as source_url, s.title as source_title, s.type as source_type
     FROM captures c
     LEFT JOIN sources s ON c.source_id = s.id
@@ -89,37 +89,36 @@ export function getCaptureById(id: string): Capture | null {
   return row ? rowToCapture(row) : null
 }
 
-export function createCapture(data: CreateCapture): Capture {
+export async function createCapture(data: CreateCapture): Promise<Capture> {
   const id = generateId()
   const now = new Date().toISOString()
-  
+
   let sourceId: string | null = null
-  
-  // Create source if URL provided
+
   if (data.source_url) {
     sourceId = generateId()
-    execute(`
+    await execute(`
       INSERT INTO sources (id, url, title, type, created_at)
       VALUES (?, ?, ?, 'url', ?)
     `, [sourceId, data.source_url, data.title, now])
   }
-  
-  execute(`
+
+  await execute(`
     INSERT INTO captures (id, title, type, source_id, content, why_saved, topic, priority, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
   `, [id, data.title, data.type, sourceId, data.content, data.why_saved || null, data.topic || null, data.priority, now, now])
-  
-  return getCaptureById(id)!
+
+  return (await getCaptureById(id))!
 }
 
-export function updateCapture(id: string, updates: Partial<Omit<Capture, 'id' | 'created_at'>>): Capture | null {
-  const existing = getCaptureById(id)
+export async function updateCapture(id: string, updates: Partial<Omit<Capture, 'id' | 'created_at'>>): Promise<Capture | null> {
+  const existing = await getCaptureById(id)
   if (!existing) return null
-  
+
   const now = new Date().toISOString()
   const fields: string[] = ['updated_at = ?']
   const values: (string | number | null)[] = [now]
-  
+
   if (updates.title !== undefined) {
     fields.push('title = ?')
     values.push(updates.title)
@@ -148,32 +147,32 @@ export function updateCapture(id: string, updates: Partial<Omit<Capture, 'id' | 
     fields.push('status = ?')
     values.push(updates.status)
   }
-  
+
   values.push(id)
-  execute(`UPDATE captures SET ${fields.join(', ')} WHERE id = ?`, values)
-  
+  await execute(`UPDATE captures SET ${fields.join(', ')} WHERE id = ?`, values)
+
   return getCaptureById(id)
 }
 
-export function updateCaptureStatus(id: string, status: CaptureStatus): Capture | null {
+export async function updateCaptureStatus(id: string, status: CaptureStatus): Promise<Capture | null> {
   return updateCapture(id, { status })
 }
 
-export function deleteCapture(id: string): boolean {
-  const existing = getCaptureById(id)
+export async function deleteCapture(id: string): Promise<boolean> {
+  const existing = await getCaptureById(id)
   if (!existing) return false
-  
-  execute('DELETE FROM captures WHERE id = ?', [id])
+
+  await execute('DELETE FROM captures WHERE id = ?', [id])
   return true
 }
 
-export function getCaptureCounts(): Record<CaptureStatus, number> {
-  const results = query<{ status: string; count: number }>(`
+export async function getCaptureCounts(): Promise<Record<CaptureStatus, number>> {
+  const results = await query<{ status: string; count: number }>(`
     SELECT status, COUNT(*) as count
     FROM captures
     GROUP BY status
   `)
-  
+
   const counts: Record<CaptureStatus, number> = {
     new: 0,
     processing: 0,
@@ -181,23 +180,23 @@ export function getCaptureCounts(): Record<CaptureStatus, number> {
     linked: 0,
     published: 0,
   }
-  
+
   for (const row of results) {
     counts[row.status as CaptureStatus] = row.count
   }
-  
+
   return counts
 }
 
-export function searchCaptures(searchTerm: string): Capture[] {
+export async function searchCaptures(searchTerm: string): Promise<Capture[]> {
   const pattern = `%${searchTerm}%`
-  const rows = query<CaptureRow>(`
+  const rows = await query<CaptureRow>(`
     SELECT c.*, s.url as source_url, s.title as source_title, s.type as source_type
     FROM captures c
     LEFT JOIN sources s ON c.source_id = s.id
-    WHERE c.title LIKE ? 
-       OR c.content LIKE ? 
-       OR c.why_saved LIKE ? 
+    WHERE c.title LIKE ?
+       OR c.content LIKE ?
+       OR c.why_saved LIKE ?
        OR c.topic LIKE ?
     ORDER BY c.created_at DESC
   `, [pattern, pattern, pattern, pattern])

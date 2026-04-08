@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { LearningGraph } from '@/components/learning/LearningGraph'
@@ -7,7 +7,7 @@ import { ImportPathDialog } from '@/components/learning/ImportPathDialog'
 import { useLearning } from '@/hooks/useLearning'
 import { Button } from '@/components/ui/button'
 import { GraduationCap, Plus } from 'lucide-react'
-import type { Lesson, LearningModule, LessonTerm } from '@/types'
+import type { Lesson, LearningModule, LessonTerm, LearningPath } from '@/types'
 
 export function LearningPage() {
   const { pathId, lessonId } = useParams<{ pathId?: string; lessonId?: string }>()
@@ -37,32 +37,47 @@ export function LearningPage() {
     return rootRef.current?.closest('main') as HTMLElement | null
   }, [])
 
-  const currentPath = pathId ? getPathById(pathId) : paths[0] || null
+  const [currentPath, setCurrentPath] = useState<LearningPath | null>(null)
+
+  useEffect(() => {
+    if (pathId) {
+      getPathById(pathId).then(p => setCurrentPath(p))
+    } else {
+      setCurrentPath(paths[0] || null)
+    }
+  }, [pathId, paths, getPathById])
+
   const effectivePathId = currentPath?.id
 
-  const allLessons = useMemo(() => {
-    if (!effectivePathId) return []
-    return getAllLessonsByPath(effectivePathId)
-  }, [effectivePathId, getAllLessonsByPath])
+  const [allLessons, setAllLessons] = useState<Lesson[]>([])
+  const [modules, setModules] = useState<LearningModule[]>([])
 
-  const modules = useMemo(() => {
-    if (!effectivePathId) return []
-    return getModulesByPath(effectivePathId)
-  }, [effectivePathId, getModulesByPath])
+  useEffect(() => {
+    if (!effectivePathId) {
+      setAllLessons([])
+      setModules([])
+      return
+    }
+    getAllLessonsByPath(effectivePathId).then(setAllLessons)
+    getModulesByPath(effectivePathId).then(setModules)
+  }, [effectivePathId, getAllLessonsByPath, getModulesByPath])
 
   useEffect(() => {
     if (lessonId) {
-      const lesson = getLessonById(lessonId)
-      setCurrentLesson(lesson)
+      (async () => {
+        const lesson = await getLessonById(lessonId)
+        setCurrentLesson(lesson)
 
-      if (lesson) {
-        const mod = modules.find(m => m.id === lesson.module_id)
-        setCurrentModule(mod || null)
-        setLessonTerms(getTermsByLesson(lessonId))
+        if (lesson) {
+          const mod = modules.find(m => m.id === lesson.module_id)
+          setCurrentModule(mod || null)
+          const terms = await getTermsByLesson(lessonId)
+          setLessonTerms(terms)
 
-        const progress = getProgress(lessonId)
-        setIsCompleted(progress?.completed || false)
-      }
+          const progress = await getProgress(lessonId)
+          setIsCompleted(progress?.completed || false)
+        }
+      })()
     } else if (allLessons.length > 0 && effectivePathId) {
       navigate(`/learn/${effectivePathId}/${allLessons[0].id}`, { replace: true })
     }

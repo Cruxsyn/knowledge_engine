@@ -345,9 +345,9 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
 
   loadStats: async () => {
     try {
-      const dbStats = getDashboardStats()
-      const sessions = getStudySessions(91)
-      const streak = getCurrentStreak()
+      const dbStats = await getDashboardStats()
+      const sessions = await getStudySessions(91)
+      const streak = await getCurrentStreak()
 
       // Build progress map from JpProgress[] -> 0-5 scale
       const progressMap: DashboardStats['progress'] = {
@@ -429,9 +429,9 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
       const engine = createFSRS(desiredRetention)
 
       // Get due cards + new cards
-      const dueCards = getDueCards(50)
+      const dueCards = await getDueCards(50)
       const newCardLimit = Math.max(0, newCardsPerDay)
-      const newSrsCards = getNewCards(undefined, newCardLimit)
+      const newSrsCards = await getNewCards(undefined, newCardLimit)
       const allCards = [...dueCards, ...newSrsCards]
 
       if (allCards.length === 0) {
@@ -452,7 +452,7 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
       const reviewCards: ReviewCard[] = []
       for (const card of allCards) {
         try {
-          const withItem = getCardWithItemData(card.id)
+          const withItem = await getCardWithItemData(card.id)
           if (!withItem) continue
 
           const reviewCard = buildReviewCard(
@@ -499,7 +499,7 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
       const engine = createFSRS(desiredRetention)
 
       // Get the raw SRS card from DB to pass to FSRS
-      const cardWithItem = getCardWithItemData(currentCard.id)
+      const cardWithItem = await getCardWithItemData(currentCard.id)
       if (!cardWithItem) return
 
       const srsCard: JpSrsCard = {
@@ -524,13 +524,13 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
       const { updatedCard, reviewLog } = fsrsReviewCard(engine, srsCard, ratingNum)
 
       // Persist updated card state
-      updateSrsCard(currentCard.id, updatedCard)
+      await updateSrsCard(currentCard.id, updatedCard)
 
       // Log the review
       const durationMs = session.startTime
         ? Math.round((Date.now() - session.startTime) / Math.max(1, session.results.length + 1))
         : 0
-      addReviewLog({
+      await addReviewLog({
         card_id: currentCard.id,
         rating: ratingNum,
         state: reviewLog.state as 0 | 1 | 2 | 3,
@@ -541,9 +541,9 @@ export const useJapaneseStore = create<JapaneseState>((set, get) => ({
 
       // Ghost management
       if (rating === 'again') {
-        createOrUpdateGhost(currentCard.id)
+        await createOrUpdateGhost(currentCard.id)
       } else if (rating === 'good' || rating === 'easy') {
-        removeGhost(currentCard.id)
+        await removeGhost(currentCard.id)
       }
 
       // Apply spreading activation

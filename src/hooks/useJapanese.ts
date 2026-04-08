@@ -10,7 +10,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAllRadicals: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getAllRadicals error:', err)
       return []
@@ -21,7 +21,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getRadicalById: fn } = await import('@/db/queries/japanese')
-      return fn(id)
+      return await fn(id)
     } catch (err) {
       console.error('[useJapanese] getRadicalById error:', err)
       return null
@@ -32,7 +32,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createRadical: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createRadical error:', err)
       return null
@@ -45,7 +45,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAllKanji: fn } = await import('@/db/queries/japanese')
-      return fn(jlptLevel)
+      return await fn(jlptLevel)
     } catch (err) {
       console.error('[useJapanese] getAllKanji error:', err)
       return []
@@ -56,7 +56,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getKanjiById: fn } = await import('@/db/queries/japanese')
-      return fn(id)
+      return await fn(id)
     } catch (err) {
       console.error('[useJapanese] getKanjiById error:', err)
       return null
@@ -67,7 +67,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getKanjiByCharacter: fn } = await import('@/db/queries/japanese')
-      return fn(character)
+      return await fn(character)
     } catch (err) {
       console.error('[useJapanese] getKanjiByCharacter error:', err)
       return null
@@ -78,7 +78,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getKanjiComponents: fn } = await import('@/db/queries/japanese')
-      return fn(kanjiId)
+      return await fn(kanjiId)
     } catch (err) {
       console.error('[useJapanese] getKanjiComponents error:', err)
       return []
@@ -89,7 +89,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createKanji: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createKanji error:', err)
       return null
@@ -102,7 +102,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAllVocabulary: fn } = await import('@/db/queries/japanese')
-      return fn(jlptLevel)
+      return await fn(jlptLevel)
     } catch (err) {
       console.error('[useJapanese] getAllVocabulary error:', err)
       return []
@@ -113,7 +113,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getVocabById: fn } = await import('@/db/queries/japanese')
-      return fn(id)
+      return await fn(id)
     } catch (err) {
       console.error('[useJapanese] getVocabById error:', err)
       return null
@@ -124,7 +124,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getVocabForKanji: fn } = await import('@/db/queries/japanese')
-      return fn(kanjiId)
+      return await fn(kanjiId)
     } catch (err) {
       console.error('[useJapanese] getVocabForKanji error:', err)
       return []
@@ -135,7 +135,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createVocabulary: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createVocabulary error:', err)
       return null
@@ -148,7 +148,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAllGrammar: fn } = await import('@/db/queries/japanese')
-      return fn(jlptLevel)
+      return await fn(jlptLevel)
     } catch (err) {
       console.error('[useJapanese] getAllGrammar error:', err)
       return []
@@ -159,7 +159,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getGrammarById: fn } = await import('@/db/queries/japanese')
-      return fn(id)
+      return await fn(id)
     } catch (err) {
       console.error('[useJapanese] getGrammarById error:', err)
       return null
@@ -170,7 +170,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createGrammar: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createGrammar error:', err)
       return null
@@ -183,7 +183,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getSentencesForVocab: fn } = await import('@/db/queries/japanese')
-      return fn(vocabId)
+      return await fn(vocabId)
     } catch (err) {
       console.error('[useJapanese] getSentencesForVocab error:', err)
       return []
@@ -194,7 +194,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createSentence: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createSentence error:', err)
       return null
@@ -207,7 +207,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAssociationsForNode: fn } = await import('@/db/queries/japanese')
-      return fn(nodeId, nodeType)
+      return await fn(nodeId, nodeType)
     } catch (err) {
       console.error('[useJapanese] getAssociationsForNode error:', err)
       return []
@@ -218,7 +218,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createAssociation: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createAssociation error:', err)
       return null
@@ -229,7 +229,7 @@ export function useJapanese() {
     if (!isDbReady) return { nodes: [], edges: [] }
     try {
       const { getGraphData: fn } = await import('@/db/queries/japanese')
-      return fn(rootId, rootType, depth ?? 2)
+      return await fn(rootId, rootType, depth ?? 2)
     } catch (err) {
       console.error('[useJapanese] getGraphData error:', err)
       return { nodes: [], edges: [] }
@@ -242,7 +242,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getDueCards: fn } = await import('@/db/queries/japanese')
-      return fn(limit)
+      return await fn(limit)
     } catch (err) {
       console.error('[useJapanese] getDueCards error:', err)
       return []
@@ -253,7 +253,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getNewCards: fn } = await import('@/db/queries/japanese')
-      return fn(itemType, limit ?? 20)
+      return await fn(itemType, limit ?? 20)
     } catch (err) {
       console.error('[useJapanese] getNewCards error:', err)
       return []
@@ -264,7 +264,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createSrsCard: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createSrsCard error:', err)
       return null
@@ -275,7 +275,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { updateSrsCard: fn } = await import('@/db/queries/japanese')
-      return fn(id, updates)
+      return await fn(id, updates)
     } catch (err) {
       console.error('[useJapanese] updateSrsCard error:', err)
       return null
@@ -286,7 +286,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getCardWithItemData: fn } = await import('@/db/queries/japanese')
-      return fn(cardId)
+      return await fn(cardId)
     } catch (err) {
       console.error('[useJapanese] getCardWithItemData error:', err)
       return null
@@ -299,7 +299,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { addReviewLog: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] addReviewLog error:', err)
       return null
@@ -310,7 +310,7 @@ export function useJapanese() {
     if (!isDbReady) return 0
     try {
       const { getTodayReviewCount: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getTodayReviewCount error:', err)
       return 0
@@ -321,7 +321,7 @@ export function useJapanese() {
     if (!isDbReady) return 0
     try {
       const { getTodayAccuracy: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getTodayAccuracy error:', err)
       return 0
@@ -334,7 +334,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getKnownWord: fn } = await import('@/db/queries/japanese')
-      return fn(lemma)
+      return await fn(lemma)
     } catch (err) {
       console.error('[useJapanese] getKnownWord error:', err)
       return null
@@ -345,7 +345,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { updateKnownWord: fn } = await import('@/db/queries/japanese')
-      return fn(lemma, data)
+      return await fn(lemma, data)
     } catch (err) {
       console.error('[useJapanese] updateKnownWord error:', err)
       return null
@@ -356,7 +356,7 @@ export function useJapanese() {
     if (!isDbReady) return 0
     try {
       const { getKnownWordCount: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getKnownWordCount error:', err)
       return 0
@@ -367,7 +367,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getAllKnownLemmas: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getAllKnownLemmas error:', err)
       return []
@@ -380,7 +380,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getGhostsDue: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getGhostsDue error:', err)
       return []
@@ -391,7 +391,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { createOrUpdateGhost: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] createOrUpdateGhost error:', err)
       return null
@@ -402,7 +402,7 @@ export function useJapanese() {
     if (!isDbReady) return false
     try {
       const { removeGhost: fn } = await import('@/db/queries/japanese')
-      return fn(id)
+      return await fn(id)
     } catch (err) {
       console.error('[useJapanese] removeGhost error:', err)
       return false
@@ -415,7 +415,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getProgress: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getProgress error:', err)
       return []
@@ -426,7 +426,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { updateProgress: fn } = await import('@/db/queries/japanese')
-      return fn(dimension, data)
+      return await fn(dimension, data)
     } catch (err) {
       console.error('[useJapanese] updateProgress error:', err)
       return null
@@ -437,7 +437,7 @@ export function useJapanese() {
     if (!isDbReady) return
     try {
       const { recalculateProgress: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] recalculateProgress error:', err)
     }
@@ -449,7 +449,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { logStudySession: fn } = await import('@/db/queries/japanese')
-      return fn(data)
+      return await fn(data)
     } catch (err) {
       console.error('[useJapanese] logStudySession error:', err)
       return null
@@ -460,7 +460,7 @@ export function useJapanese() {
     if (!isDbReady) return []
     try {
       const { getStudySessions: fn } = await import('@/db/queries/japanese')
-      return fn(limit)
+      return await fn(limit)
     } catch (err) {
       console.error('[useJapanese] getStudySessions error:', err)
       return []
@@ -471,7 +471,7 @@ export function useJapanese() {
     if (!isDbReady) return 0
     try {
       const { getCurrentStreak: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getCurrentStreak error:', err)
       return 0
@@ -484,7 +484,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getSetting: fn } = await import('@/db/queries/japanese')
-      return fn(key)
+      return await fn(key)
     } catch (err) {
       console.error('[useJapanese] getSetting error:', err)
       return null
@@ -495,7 +495,7 @@ export function useJapanese() {
     if (!isDbReady) return
     try {
       const { setSetting: fn } = await import('@/db/queries/japanese')
-      return fn(key, value)
+      return await fn(key, value)
     } catch (err) {
       console.error('[useJapanese] setSetting error:', err)
     }
@@ -505,7 +505,7 @@ export function useJapanese() {
     if (!isDbReady) return {}
     try {
       const { getAllSettings: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getAllSettings error:', err)
       return {}
@@ -518,7 +518,7 @@ export function useJapanese() {
     if (!isDbReady) return null
     try {
       const { getDashboardStats: fn } = await import('@/db/queries/japanese')
-      return fn()
+      return await fn()
     } catch (err) {
       console.error('[useJapanese] getDashboardStats error:', err)
       return null

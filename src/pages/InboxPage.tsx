@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { InboxList } from '@/components/inbox/InboxList'
 import { CaptureDetail } from '@/components/inbox/CaptureDetail'
@@ -19,7 +20,11 @@ const statusTabs: { value: CaptureStatus | 'all'; label: string }[] = [
 export function InboxPage() {
   const { setQuickCaptureOpen, captureStatusFilter, setCaptureStatusFilter, selectedCapture } = useAppStore()
   const { getCounts } = useCaptures()
-  const counts = getCounts()
+  const [counts, setCounts] = useState<Record<CaptureStatus, number> | null>(null)
+
+  useEffect(() => {
+    getCounts().then(setCounts)
+  }, [getCounts])
 
   return (
     <>

@@ -13,7 +13,7 @@ export async function applySpreadingActivation(
   ratingScale: number // 0-1 scale based on rating (e.g., again=0.25, hard=0.5, good=0.75, easy=1.0)
 ): Promise<void> {
   // 1. Get associations for the reviewed item
-  const associations = getAssociationsForNode(itemId, itemType)
+  const associations = await getAssociationsForNode(itemId, itemType)
 
   if (associations.length === 0) return
 
@@ -23,7 +23,7 @@ export async function applySpreadingActivation(
   // 3. For each boosted neighbor, find their SRS card and update implicit_boost
   for (const [neighborId, boostFactor] of boosts) {
     // Find SRS cards for this neighbor item
-    const cards = query<{ id: string; implicit_boost: number }>(
+    const cards = await query<{ id: string; implicit_boost: number }>(
       'SELECT id, implicit_boost FROM jp_srs_cards WHERE item_id = ?',
       [neighborId]
     )
@@ -31,7 +31,7 @@ export async function applySpreadingActivation(
     for (const card of cards) {
       // new_boost = old_boost + boost_factor * ratingScale * 0.1, capped at 1.0
       const newBoost = Math.min(1.0, card.implicit_boost + boostFactor * ratingScale * 0.1)
-      updateSrsCard(card.id, { implicit_boost: newBoost })
+      await updateSrsCard(card.id, { implicit_boost: newBoost })
     }
   }
 }

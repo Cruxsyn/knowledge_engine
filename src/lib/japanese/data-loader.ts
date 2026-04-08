@@ -1,4 +1,4 @@
-import { execute, transaction, query } from '@/db/database'
+import { transaction, query } from '@/db/database'
 import { generateId } from '@/lib/utils'
 
 // ── Import types ─────────────────────────────────────────────────────────────
@@ -31,44 +31,43 @@ export interface VocabImportEntry {
  * Used for loading JLPT-level data packs.
  * Skips entries that already exist (by character).
  */
-export function importKanjiData(kanjiEntries: KanjiImportEntry[]): number {
+export async function importKanjiData(kanjiEntries: KanjiImportEntry[]): Promise<number> {
+  // First, find which characters already exist
+  const existingRows = await query<{ character: string }>('SELECT character FROM jp_kanji')
+  const existingChars = new Set(existingRows.map(r => r.character))
+
+  const statements: Array<{ sql: string; params?: unknown[] }> = []
   let imported = 0
-  transaction(() => {
-    for (const entry of kanjiEntries) {
-      const existing = query<{ id: string }>('SELECT id FROM jp_kanji WHERE character = ?', [entry.character])
-      if (existing.length > 0) continue
 
-      const id = generateId()
-      execute(
-        `INSERT INTO jp_kanji (id, character, meanings, on_readings, kun_readings, stroke_count, jlpt_level, grade, frequency_rank, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          entry.character,
-          JSON.stringify(entry.meanings),
-          JSON.stringify(entry.on_readings || []),
-          JSON.stringify(entry.kun_readings || []),
-          entry.stroke_count,
-          entry.jlpt_level,
-          entry.grade ?? null,
-          entry.frequency_rank ?? null,
-          entry.sort_order || 0,
-        ]
-      )
+  for (const entry of kanjiEntries) {
+    if (existingChars.has(entry.character)) continue
 
-      // Create SRS cards for this kanji
-      execute(
-        `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'kanji', 'meaning', datetime('now'))`,
-        [generateId(), id]
-      )
-      execute(
-        `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'kanji', 'reading', datetime('now'))`,
-        [generateId(), id]
-      )
+    const id = generateId()
+    statements.push({
+      sql: `INSERT INTO jp_kanji (id, character, meanings, on_readings, kun_readings, stroke_count, jlpt_level, grade, frequency_rank, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        id, entry.character, JSON.stringify(entry.meanings),
+        JSON.stringify(entry.on_readings || []), JSON.stringify(entry.kun_readings || []),
+        entry.stroke_count, entry.jlpt_level, entry.grade ?? null,
+        entry.frequency_rank ?? null, entry.sort_order || 0,
+      ],
+    })
+    statements.push({
+      sql: `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'kanji', 'meaning', datetime('now'))`,
+      params: [generateId(), id],
+    })
+    statements.push({
+      sql: `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'kanji', 'reading', datetime('now'))`,
+      params: [generateId(), id],
+    })
+    imported++
+  }
 
-      imported++
-    }
-  })
+  if (statements.length > 0) {
+    await transaction(statements)
+  }
+
   return imported
 }
 
@@ -76,40 +75,37 @@ export function importKanjiData(kanjiEntries: KanjiImportEntry[]): number {
  * Import vocabulary data.
  * Skips entries that already exist (by word + reading).
  */
-export function importVocabData(vocabEntries: VocabImportEntry[]): number {
+export async function importVocabData(vocabEntries: VocabImportEntry[]): Promise<number> {
+  // First, find which words already exist
+  const existingRows = await query<{ word: string; reading: string }>('SELECT word, reading FROM jp_vocabulary')
+  const existingKeys = new Set(existingRows.map(r => `${r.word}|${r.reading}`))
+
+  const statements: Array<{ sql: string; params?: unknown[] }> = []
   let imported = 0
-  transaction(() => {
-    for (const entry of vocabEntries) {
-      const existing = query<{ id: string }>(
-        'SELECT id FROM jp_vocabulary WHERE word = ? AND reading = ?',
-        [entry.word, entry.reading]
-      )
-      if (existing.length > 0) continue
 
-      const id = generateId()
-      execute(
-        `INSERT INTO jp_vocabulary (id, word, reading, meanings, part_of_speech, jlpt_level, frequency_rank)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          entry.word,
-          entry.reading,
-          JSON.stringify(entry.meanings),
-          entry.part_of_speech ?? null,
-          entry.jlpt_level ?? null,
-          entry.frequency_rank ?? null,
-        ]
-      )
+  for (const entry of vocabEntries) {
+    if (existingKeys.has(`${entry.word}|${entry.reading}`)) continue
 
-      // Create SRS card
-      execute(
-        `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'vocab', 'meaning', datetime('now'))`,
-        [generateId(), id]
-      )
+    const id = generateId()
+    statements.push({
+      sql: `INSERT INTO jp_vocabulary (id, word, reading, meanings, part_of_speech, jlpt_level, frequency_rank)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        id, entry.word, entry.reading, JSON.stringify(entry.meanings),
+        entry.part_of_speech ?? null, entry.jlpt_level ?? null, entry.frequency_rank ?? null,
+      ],
+    })
+    statements.push({
+      sql: `INSERT INTO jp_srs_cards (id, item_id, item_type, card_type, due) VALUES (?, ?, 'vocab', 'meaning', datetime('now'))`,
+      params: [generateId(), id],
+    })
+    imported++
+  }
 
-      imported++
-    }
-  })
+  if (statements.length > 0) {
+    await transaction(statements)
+  }
+
   return imported
 }
 
@@ -128,8 +124,8 @@ export async function loadExpansionPack(
     vocabulary?: VocabImportEntry[]
   }
 
-  const kanjiCount = data.kanji ? importKanjiData(data.kanji) : 0
-  const vocabCount = data.vocabulary ? importVocabData(data.vocabulary) : 0
+  const kanjiCount = data.kanji ? await importKanjiData(data.kanji) : 0
+  const vocabCount = data.vocabulary ? await importVocabData(data.vocabulary) : 0
 
   console.log(`[data-loader] Imported ${kanjiCount} kanji, ${vocabCount} vocab from ${url}`)
   return { kanji: kanjiCount, vocab: vocabCount }
@@ -138,16 +134,16 @@ export async function loadExpansionPack(
 /**
  * Get import status (how many items exist per JLPT level).
  */
-export function getImportStatus(): { level: number; kanji: number; vocab: number }[] {
+export async function getImportStatus(): Promise<{ level: number; kanji: number; vocab: number }[]> {
   const levels = [5, 4, 3, 2, 1]
   const result: { level: number; kanji: number; vocab: number }[] = []
 
   for (const level of levels) {
-    const kanjiRows = query<{ cnt: number }>(
+    const kanjiRows = await query<{ cnt: number }>(
       'SELECT COUNT(*) as cnt FROM jp_kanji WHERE jlpt_level = ?',
       [level]
     )
-    const vocabRows = query<{ cnt: number }>(
+    const vocabRows = await query<{ cnt: number }>(
       'SELECT COUNT(*) as cnt FROM jp_vocabulary WHERE jlpt_level = ?',
       [level]
     )

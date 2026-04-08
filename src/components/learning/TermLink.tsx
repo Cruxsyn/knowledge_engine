@@ -13,7 +13,7 @@ export function TermLink({ termRef, children }: TermLinkProps) {
   const { getConceptById } = useConcepts()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [concept, setConcept] = useState<ReturnType<typeof getConceptById>>(null)
+  const [concept, setConcept] = useState<import('@/types').Concept | null>(null)
   const containerRef = useRef<HTMLSpanElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -21,8 +21,7 @@ export function TermLink({ termRef, children }: TermLinkProps) {
   // Load concept data eagerly
   useEffect(() => {
     if (termRef.conceptId) {
-      const c = getConceptById(termRef.conceptId)
-      setConcept(c)
+      getConceptById(termRef.conceptId).then(c => setConcept(c))
     }
   }, [termRef.conceptId, getConceptById])
 

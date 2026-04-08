@@ -183,7 +183,7 @@ export function ImportPathDialog({ open, onOpenChange, onImported }: ImportPathD
     setTimeout(() => setCopied(false), 2000)
   }, [])
 
-  const handleImport = useCallback(() => {
+  const handleImport = useCallback(async () => {
     setError(null)
 
     let parsed: unknown
@@ -203,7 +203,7 @@ export function ImportPathDialog({ open, onOpenChange, onImported }: ImportPathD
 
     setImporting(true)
     try {
-      const pathId = importLearningPath(parsed as ImportLearningPath)
+      const pathId = await importLearningPath(parsed as ImportLearningPath)
       setJson('')
       setError(null)
       setImporting(false)
