@@ -10,7 +10,10 @@ import {
   Share2,
   Calculator,
   Network,
-  Languages
+  Languages,
+  Brain,
+  BookOpen,
+  GitGraph,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -25,6 +28,9 @@ const learnItems = [
 ]
 
 const toolItems = [
+  { to: '/graph', icon: GitGraph, label: 'Knowledge Graph', shortcut: 'Alt+G' },
+  { to: '/notebook/new', icon: BookOpen, label: 'Notebook', shortcut: 'Alt+B' },
+  { to: '/nn', icon: Brain, label: 'NN Playground', shortcut: 'Alt+P' },
   { to: '/terminal', icon: Terminal, label: 'Terminal', shortcut: 'Alt+T' },
   { to: '/math-viz', icon: Calculator, label: 'Math Viz', shortcut: 'Alt+M' },
 ]

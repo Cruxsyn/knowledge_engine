@@ -9,6 +9,9 @@ import { VisualizePage } from '@/pages/VisualizePage'
 import { MathVisualizationPage } from '@/pages/MathVisualizationPage'
 import { SharedViewPage } from '@/pages/SharedViewPage'
 import { JapanesePage } from '@/pages/JapanesePage'
+import { GraphPage } from '@/pages/GraphPage'
+import { NotebookPage } from '@/pages/NotebookPage'
+import { NNPlaygroundPage } from '@/pages/NNPlaygroundPage'
 
 function App() {
   return (
@@ -19,6 +22,9 @@ function App() {
           <Route path="/" element={<NotesPage />} />
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/concepts" element={<ConceptsPage />} />
+          <Route path="/graph" element={<GraphPage />} />
+          <Route path="/notebook/:id" element={<NotebookPage />} />
+          <Route path="/nn" element={<NNPlaygroundPage />} />
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/math-viz" element={<MathVisualizationPage />} />
           <Route path="/export" element={<ExportPage />} />

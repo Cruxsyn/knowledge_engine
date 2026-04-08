@@ -6,6 +6,7 @@ import { useAppStore } from '@/stores/appStore'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { QuickCapture } from '@/components/inbox/QuickCapture'
 import { ShareDialog } from '@/components/share/ShareDialog'
+import { CommandPalette } from '@/components/layout/CommandPalette'
 import { Loader2 } from 'lucide-react'
 
 export function MainLayout() {
@@ -101,6 +102,7 @@ export function MainLayout() {
       <GlobalSearch />
       <QuickCapture />
       <ShareDialog />
+      <CommandPalette />
     </div>
   )
 }

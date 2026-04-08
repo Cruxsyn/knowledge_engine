@@ -19,3 +19,24 @@ serde_json = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 log = "0.4"
 env_logger = "0.11"
+
+# Phase 2: Vault engine
+notify = { version = "7", features = ["macos_fsevent"] }
+yaml-rust2 = "0.9"
+regex = "1"
+walkdir = "2"
+
+# Phase 3: Search
+tantivy = "0.22"
+
+# Phase 4: Math engine
+nalgebra = "0.33"
+evalexpr = "12"
+
+# Phase 6: Git integration
+git2 = "0.19"
+
+# Utilities
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["fs", "sync"] }
