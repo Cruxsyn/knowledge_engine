@@ -503,3 +503,87 @@ export async function importLearningPath(data: ImportLearningPath): Promise<stri
 
   return pathId
 }
+
+// ---- Math SRS Cards ----
+
+export interface MathSrsCard {
+  id: string
+  path_id: string
+  lesson_id: string | null
+  card_type: 'theorem' | 'computation' | 'definition' | 'proof_step'
+  question: string
+  answer: string
+  concept_id: string | null
+  stability: number
+  difficulty: number
+  reps: number
+  lapses: number
+  state: number
+  due: string
+  last_review: string | null
+}
+
+interface MathSrsCardRow {
+  id: string
+  path_id: string
+  lesson_id: string | null
+  card_type: string
+  question: string
+  answer: string
+  concept_id: string | null
+  stability: number
+  difficulty: number
+  reps: number
+  lapses: number
+  state: number
+  due: string
+  last_review: string | null
+}
+
+function rowToMathSrsCard(row: MathSrsCardRow): MathSrsCard {
+  return {
+    ...row,
+    card_type: row.card_type as MathSrsCard['card_type'],
+  }
+}
+
+export async function getMathSrsCardsByPath(pathId: string): Promise<MathSrsCard[]> {
+  const rows = await query<MathSrsCardRow>(
+    'SELECT * FROM math_srs_cards WHERE path_id = ? ORDER BY due ASC',
+    [pathId]
+  )
+  return rows.map(rowToMathSrsCard)
+}
+
+export async function getDueMathSrsCards(pathId?: string, limit: number = 50): Promise<MathSrsCard[]> {
+  const sql = pathId
+    ? `SELECT * FROM math_srs_cards WHERE path_id = ? AND due <= datetime('now') ORDER BY due ASC LIMIT ?`
+    : `SELECT * FROM math_srs_cards WHERE due <= datetime('now') ORDER BY due ASC LIMIT ?`
+  const params = pathId ? [pathId, limit] : [limit]
+  const rows = await query<MathSrsCardRow>(sql, params)
+  return rows.map(rowToMathSrsCard)
+}
+
+export async function reviewMathSrsCard(
+  id: string,
+  updates: { stability: number; difficulty: number; reps: number; lapses: number; state: number; due: string }
+): Promise<void> {
+  const now = new Date().toISOString()
+  await execute(
+    `UPDATE math_srs_cards SET stability = ?, difficulty = ?, reps = ?, lapses = ?, state = ?, due = ?, last_review = ? WHERE id = ?`,
+    [updates.stability, updates.difficulty, updates.reps, updates.lapses, updates.state, updates.due, now, id]
+  )
+}
+
+export async function getMathSrsCardCounts(pathId: string): Promise<{ total: number; due: number; learning: number; mastered: number }> {
+  const total = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM math_srs_cards WHERE path_id = ?', [pathId])
+  const due = await queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM math_srs_cards WHERE path_id = ? AND due <= datetime('now')`, [pathId])
+  const learning = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM math_srs_cards WHERE path_id = ? AND state IN (1, 3)', [pathId])
+  const mastered = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM math_srs_cards WHERE path_id = ? AND state = 2 AND reps >= 3', [pathId])
+  return {
+    total: total?.count ?? 0,
+    due: due?.count ?? 0,
+    learning: learning?.count ?? 0,
+    mastered: mastered?.count ?? 0,
+  }
+}

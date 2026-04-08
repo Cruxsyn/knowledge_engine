@@ -71,3 +71,29 @@ CREATE INDEX IF NOT EXISTS idx_learning_modules_path ON learning_modules(path_id
 CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons(module_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_terms_lesson ON lesson_terms(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_completed ON lesson_progress(completed);
+
+-- Math SRS cards for spaced repetition review
+CREATE TABLE IF NOT EXISTS math_srs_cards (
+  id TEXT PRIMARY KEY,
+  path_id TEXT NOT NULL,
+  lesson_id TEXT,
+  card_type TEXT NOT NULL DEFAULT 'definition',
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  concept_id TEXT,
+  stability REAL NOT NULL DEFAULT 0,
+  difficulty REAL NOT NULL DEFAULT 0,
+  reps INTEGER NOT NULL DEFAULT 0,
+  lapses INTEGER NOT NULL DEFAULT 0,
+  state INTEGER NOT NULL DEFAULT 0,
+  due TEXT NOT NULL DEFAULT (datetime('now')),
+  last_review TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (path_id) REFERENCES learning_paths(id) ON DELETE CASCADE,
+  FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE SET NULL,
+  FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_math_srs_cards_path ON math_srs_cards(path_id);
+CREATE INDEX IF NOT EXISTS idx_math_srs_cards_due ON math_srs_cards(due);
+CREATE INDEX IF NOT EXISTS idx_math_srs_cards_state ON math_srs_cards(state);

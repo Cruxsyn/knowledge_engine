@@ -5,6 +5,7 @@ import schema from '../schema.sql?raw'
 import learningSchema from '../learning-schema.sql?raw'
 import japaneseSchema from '../japanese-schema.sql?raw'
 import { seedJapaneseData } from '@/db/seed/japanese-seed'
+import { seedAllMathCurricula } from '@/db/seed/math/index'
 
 const DEBOUNCE_SAVE_MS = 1000
 
@@ -49,6 +50,12 @@ export class SqlJsAdapter implements DatabaseAdapter {
         }
       } catch (err) {
         console.error('[SqlJsAdapter] Japanese seed check error:', err)
+      }
+      // Seed math curricula if empty
+      try {
+        seedAllMathCurricula(this.db)
+      } catch (err) {
+        console.error('[SqlJsAdapter] Math seed error:', err)
       }
       await this.persist()
     } else {

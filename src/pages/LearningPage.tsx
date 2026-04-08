@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { LearningGraph } from '@/components/learning/LearningGraph'
 import { LessonReader } from '@/components/learning/LessonReader'
 import { ImportPathDialog } from '@/components/learning/ImportPathDialog'
+import { CurriculumBrowser } from '@/components/learning/CurriculumBrowser'
 import { useLearning } from '@/hooks/useLearning'
 import { Button } from '@/components/ui/button'
 import { GraduationCap, Plus } from 'lucide-react'
@@ -83,11 +84,7 @@ export function LearningPage() {
     }
   }, [lessonId, effectivePathId, allLessons, modules, getLessonById, getTermsByLesson, getProgress, navigate])
 
-  useEffect(() => {
-    if (!pathId && paths.length > 0 && !loading) {
-      navigate(`/learn/${paths[0].id}`, { replace: true })
-    }
-  }, [pathId, paths, loading, navigate])
+  // Don't auto-navigate — show CurriculumBrowser instead when no pathId
 
   useEffect(() => {
     const el = getScrollContainer()
@@ -160,22 +157,12 @@ export function LearningPage() {
     )
   }
 
-  if (paths.length === 0) {
+  if (!pathId) {
     return (
       <div ref={rootRef}>
         <Header title="Peak Learning" subtitle="Structured learning paths" actions={headerActions} />
-        <div className="flex items-center justify-center h-[50vh]">
-          <div className="text-center">
-            <GraduationCap className="h-12 w-12 text-warm-gray/30 mx-auto mb-4" />
-            <h2 className="text-lg font-serif text-parchment mb-2">No learning paths yet</h2>
-            <p className="text-sm text-warm-gray mb-6">
-              Use AI to generate a learning path on any topic.
-            </p>
-            <Button onClick={() => setImportOpen(true)} className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              Import Learning Path
-            </Button>
-          </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          <CurriculumBrowser onSelectPath={(id) => navigate(`/learn/${id}`)} />
         </div>
         <ImportPathDialog open={importOpen} onOpenChange={setImportOpen} onImported={handleImported} />
       </div>

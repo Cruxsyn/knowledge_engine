@@ -12,6 +12,7 @@ import { JapanesePage } from '@/pages/JapanesePage'
 import { GraphPage } from '@/pages/GraphPage'
 import { NotebookPage } from '@/pages/NotebookPage'
 import { NNPlaygroundPage } from '@/pages/NNPlaygroundPage'
+import { LearningPage } from '@/pages/LearningPage'
 
 function App() {
   return (
@@ -27,6 +28,9 @@ function App() {
           <Route path="/nn" element={<NNPlaygroundPage />} />
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/math-viz" element={<MathVisualizationPage />} />
+          <Route path="/learn" element={<LearningPage />} />
+          <Route path="/learn/:pathId" element={<LearningPage />} />
+          <Route path="/learn/:pathId/:lessonId" element={<LearningPage />} />
           <Route path="/export" element={<ExportPage />} />
           <Route path="/japanese/*" element={<JapanesePage />} />
         </Route>

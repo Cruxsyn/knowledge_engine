@@ -14,6 +14,7 @@ import {
   Brain,
   BookOpen,
   GitGraph,
+  GraduationCap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 const learnItems = [
   { to: '/', icon: FileText, label: 'Atomic Notes', shortcut: 'Alt+N' },
   { to: '/concepts', icon: Lightbulb, label: 'Concepts', shortcut: 'Alt+C' },
+  { to: '/learn', icon: GraduationCap, label: 'Curricula', shortcut: 'Alt+L' },
   { to: '/japanese', icon: Languages, label: 'Japanese', shortcut: 'Alt+J' },
 ]
 

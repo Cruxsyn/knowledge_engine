@@ -1,53 +1,64 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { FormattedText } from '@/components/ui/formatted-text'
 import { Button } from '@/components/ui/button'
-import { Eye, ThumbsUp, ThumbsDown, SkipForward } from 'lucide-react'
+import { Eye, ThumbsUp, ThumbsDown, SkipForward, Loader2 } from 'lucide-react'
+import { getDueMathSrsCards, reviewMathSrsCard } from '@/db/queries/learning'
+import type { MathSrsCard } from '@/db/queries/learning'
 
-interface MathCard {
-  id: string
-  type: 'theorem' | 'proof_step' | 'computation' | 'definition'
-  question: string // LaTeX
-  answer: string // LaTeX
-  conceptName?: string
+interface MathReviewProps {
+  pathId?: string
 }
 
-// Sample math cards for demonstration
-const SAMPLE_CARDS: MathCard[] = [
-  {
-    id: '1', type: 'theorem',
-    question: 'State the **Chain Rule** for derivatives.',
-    answer: '$$\\frac{d}{dx}[f(g(x))] = f\'(g(x)) \\cdot g\'(x)$$\n\nThe derivative of a composition is the outer derivative evaluated at the inner function, times the inner derivative.',
-    conceptName: 'Chain Rule',
-  },
-  {
-    id: '2', type: 'computation',
-    question: 'Compute: $$\\frac{d}{dx}[\\sin(x^2)]$$',
-    answer: 'Using the chain rule with $f(u) = \\sin(u)$ and $g(x) = x^2$:\n\n$$\\cos(x^2) \\cdot 2x = 2x\\cos(x^2)$$',
-    conceptName: 'Chain Rule',
-  },
-  {
-    id: '3', type: 'definition',
-    question: 'What is the **gradient** $\\nabla f$ of a function $f: \\mathbb{R}^n \\to \\mathbb{R}$?',
-    answer: '$$\\nabla f = \\left(\\frac{\\partial f}{\\partial x_1}, \\frac{\\partial f}{\\partial x_2}, \\ldots, \\frac{\\partial f}{\\partial x_n}\\right)$$\n\nThe vector of all partial derivatives. Points in the direction of steepest ascent.',
-    conceptName: 'Gradient',
-  },
-  {
-    id: '4', type: 'theorem',
-    question: 'State the **Universal Approximation Theorem** (informal).',
-    answer: 'A feedforward neural network with a single hidden layer containing a finite number of neurons can approximate any continuous function on a compact subset of $\\mathbb{R}^n$, given a non-constant, bounded, and continuous activation function.',
-    conceptName: 'Neural Networks',
-  },
-]
-
-export function MathReview() {
-  const [cards] = useState<MathCard[]>(SAMPLE_CARDS)
+export function MathReview({ pathId }: MathReviewProps) {
+  const [cards, setCards] = useState<MathSrsCard[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [completed, setCompleted] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const dueCards = await getDueMathSrsCards(pathId, 50)
+        setCards(dueCards)
+      } catch (err) {
+        console.error('Failed to load SRS cards:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [pathId])
 
   const currentCard = cards[currentIdx]
 
-  const rate = useCallback((_correct: boolean) => {
+  const rate = useCallback(async (correct: boolean) => {
+    if (!currentCard) return
+
+    // Simple SRS scheduling
+    const now = new Date()
+    let nextDue: Date
+    const newReps = currentCard.reps + 1
+
+    if (correct) {
+      // Good: schedule further out based on reps
+      const days = Math.max(1, Math.pow(2, newReps - 1)) // 1, 1, 2, 4, 8...
+      nextDue = new Date(now.getTime() + days * 86400000)
+    } else {
+      // Again: review soon
+      nextDue = new Date(now.getTime() + 600000) // 10 minutes
+    }
+
+    await reviewMathSrsCard(currentCard.id, {
+      stability: correct ? currentCard.stability + 1 : Math.max(0, currentCard.stability - 0.5),
+      difficulty: correct ? Math.max(0, currentCard.difficulty - 0.1) : Math.min(1, currentCard.difficulty + 0.2),
+      reps: newReps,
+      lapses: correct ? currentCard.lapses : currentCard.lapses + 1,
+      state: correct ? 2 : 1,
+      due: nextDue.toISOString(),
+    })
+
     setCompleted(prev => new Set([...prev, currentCard.id]))
     setShowAnswer(false)
     if (currentIdx < cards.length - 1) {
@@ -62,9 +73,26 @@ export function MathReview() {
     }
   }, [currentIdx, cards.length])
 
-  if (completed.size === cards.length) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin text-warm-gray" />
+      </div>
+    )
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+        <h2 className="text-xl font-serif text-parchment mb-2">No Cards Due</h2>
+        <p className="text-warm-gray text-sm">All caught up! Start learning to generate review cards.</p>
+      </div>
+    )
+  }
+
+  if (completed.size >= cards.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center p-8">
         <h2 className="text-2xl font-serif text-parchment mb-2">Review Complete</h2>
         <p className="text-warm-gray mb-4">You reviewed {cards.length} math cards.</p>
         <Button variant="gold" onClick={() => { setCompleted(new Set()); setCurrentIdx(0) }}>
@@ -74,7 +102,12 @@ export function MathReview() {
     )
   }
 
-  const TYPE_LABELS = { theorem: 'Theorem Recall', proof_step: 'Proof Step', computation: 'Compute', definition: 'Definition' }
+  const TYPE_LABELS: Record<string, string> = {
+    theorem: 'Theorem Recall',
+    proof_step: 'Proof Step',
+    computation: 'Compute',
+    definition: 'Definition',
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -90,27 +123,25 @@ export function MathReview() {
       </div>
 
       {/* Card */}
-      <div className="border border-ash-stone/50 rounded-xl overflow-hidden">
-        {/* Card header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-charcoal-slate/50 border-b border-ash-stone/30">
-          <span className="text-xs uppercase tracking-wider text-warm-gray/50">{TYPE_LABELS[currentCard.type]}</span>
-          {currentCard.conceptName && (
-            <span className="text-xs text-icon-gold/70">{currentCard.conceptName}</span>
+      {currentCard && (
+        <div className="border border-ash-stone/50 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-charcoal-slate/50 border-b border-ash-stone/30">
+            <span className="text-xs uppercase tracking-wider text-warm-gray/50">
+              {TYPE_LABELS[currentCard.card_type] || currentCard.card_type}
+            </span>
+          </div>
+
+          <div className="p-6">
+            <FormattedText>{currentCard.question}</FormattedText>
+          </div>
+
+          {showAnswer && (
+            <div className="p-6 border-t border-ash-stone/30 bg-obsidian/30">
+              <FormattedText>{currentCard.answer}</FormattedText>
+            </div>
           )}
         </div>
-
-        {/* Question */}
-        <div className="p-6">
-          <FormattedText>{currentCard.question}</FormattedText>
-        </div>
-
-        {/* Answer */}
-        {showAnswer && (
-          <div className="p-6 border-t border-ash-stone/30 bg-obsidian/30">
-            <FormattedText>{currentCard.answer}</FormattedText>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-center gap-3">
