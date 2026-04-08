@@ -1,4 +1,9 @@
 import type { Database } from 'sql.js'
+import { seedLinearAlgebra } from './linear-algebra'
+import { seedCalculusML } from './calculus-ml'
+import { seedProbability } from './probability'
+import { seedNeuralNetworks } from './neural-networks'
+import { seedDeepLearning } from './deep-learning'
 
 /**
  * Check if math curricula have been seeded.
@@ -13,10 +18,8 @@ export function isMathSeeded(db: Database): boolean {
 }
 
 /**
- * Seed all math curricula. Creates 5 learning paths with lessons,
- * concepts, and SRS review cards.
- *
- * Individual curriculum seeders are loaded dynamically as they are added.
+ * Seed all math curricula. Creates 5 learning paths with ~20 lessons,
+ * ~60 concepts, and ~40 SRS review cards.
  */
 export function seedAllMathCurricula(db: Database): void {
   if (isMathSeeded(db)) {
@@ -46,37 +49,13 @@ export function seedAllMathCurricula(db: Database): void {
     FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE SET NULL
   )`)
 
-  console.log('[Math Seed] Seeding math curricula...')
+  console.log('[Math Seed] Seeding all math curricula...')
 
-  try {
-    const { seedLinearAlgebra } = require('./linear-algebra')
-    seedLinearAlgebra(db)
-    console.log('[Math Seed] Linear Algebra seeded')
-  } catch { console.log('[Math Seed] Linear Algebra seed not yet available') }
+  seedLinearAlgebra(db)
+  seedCalculusML(db)
+  seedProbability(db)
+  seedNeuralNetworks(db)
+  seedDeepLearning(db)
 
-  try {
-    const { seedCalculusML } = require('./calculus-ml')
-    seedCalculusML(db)
-    console.log('[Math Seed] Calculus for ML seeded')
-  } catch { console.log('[Math Seed] Calculus for ML seed not yet available') }
-
-  try {
-    const { seedProbability } = require('./probability')
-    seedProbability(db)
-    console.log('[Math Seed] Probability seeded')
-  } catch { console.log('[Math Seed] Probability seed not yet available') }
-
-  try {
-    const { seedNeuralNetworks } = require('./neural-networks')
-    seedNeuralNetworks(db)
-    console.log('[Math Seed] Neural Networks seeded')
-  } catch { console.log('[Math Seed] Neural Networks seed not yet available') }
-
-  try {
-    const { seedDeepLearning } = require('./deep-learning')
-    seedDeepLearning(db)
-    console.log('[Math Seed] Deep Learning seeded')
-  } catch { console.log('[Math Seed] Deep Learning seed not yet available') }
-
-  console.log('[Math Seed] Done')
+  console.log('[Math Seed] All 5 curricula seeded successfully')
 }
