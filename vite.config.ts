@@ -35,7 +35,7 @@ export default defineConfig({
   },
   build: {
     // Tauri uses Chromium on Windows and WebKit on macOS/Linux
-    target: isTauri ? 'esnext' : 'modules',
+    target: isTauri ? 'esnext' : 'es2022',
     // Don't minify for debug builds in Tauri
     minify: !isTauri ? 'esbuild' : !!process.env.TAURI_ENV_DEBUG ? false : 'esbuild',
     // Produce sourcemaps for debug builds
