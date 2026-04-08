@@ -1,7 +1,7 @@
-use git2::{Repository, Signature, StatusOptions};
-use serde::Serialize;
+use git2::{Repository, Signature};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitLogEntry {
     pub hash: String,
     pub message: String,
